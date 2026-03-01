@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LATAM en Datos | Plataforma Premium</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Chart.js para las comparativas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="./styles.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+          colors: {
+            brand: {
+              main: '#4f46e5', // Indiggo moderno
+              sub: '#0ea5e9', // Cyan secundario
+              dark: '#0f172a',
+              bg: '#f8fafc'
+            }
+          },
+          boxShadow: {
+            'bento': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 24px 38px 3px rgba(0, 0, 0, 0.02), 0 9px 46px 8px rgba(0, 0, 0, 0.02)',
+            'floating': '0 20px 40px -10px rgba(0,0,0,0.1)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="text-slate-800 antialiased bg-slate-50 selection:bg-brand-main selection:text-white pb-10">
+
+  <!-- Background abstracto premium (Bento Style) -->
+  <div class="fixed inset-0 pointer-events-none z-0">
+    <div
+      class="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-200/30 blur-[100px] mix-blend-multiply">
+    </div>
+    <div
+      class="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-cyan-200/30 blur-[100px] mix-blend-multiply">
+    </div>
+    <div
+      class="absolute top-[20%] right-[20%] w-[30vw] h-[30vw] rounded-full bg-rose-200/20 blur-[80px] mix-blend-multiply">
+    </div>
+  </div>
+
+  <!-- Vista Login -->
+  <div id="loginView"
+    class="min-h-screen flex items-center justify-center p-4 relative z-10 w-full transition-opacity duration-500">
+    <div
+      class="w-full max-w-sm bento-card relative overflow-hidden backdrop-blur-xl bg-white/70 border border-white p-8">
+      <div class="relative z-10 text-center">
+        <div
+          class="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-xl mb-6">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-7 h-7" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A11.954 11.954 0 0112 15c-3.1 0-5.91-.986-8.19-2.652M3 12c0-.778.099-1.533.284-2.253m0 0A8.96 8.96 0 013 12c0-1.705.48-3.3 1.3-4.668m0 0a12.01 12.01 0 0115.4 0">
+            </path>
+          </svg>
+        </div>
+        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">LATAM en Datos</h1>
+        <p class="text-slate-500 text-sm mt-1 mb-8">Inteligencia geo-académica interconectada.</p>
+
+        <form id="loginForm" class="space-y-4 text-left">
+          <div>
+            <label class="text-xs font-bold text-slate-600 uppercase tracking-wider ml-1">Usuario</label>
+            <input id="username" class="modern-input" placeholder="Ingresa tu usuario" required />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-600 uppercase tracking-wider ml-1">Contraseña</label>
+            <input id="password" type="password" class="modern-input" placeholder="••••••••" required />
+          </div>
+          <button class="w-full btn-primary text-sm py-3 mt-4" type="submit">Ingresar</button>
+        </form>
+        <p id="loginError"
+          class="bg-rose-50 text-rose-600 text-xs font-semibold mt-4 p-3 rounded-xl border border-rose-100 hidden"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista Principal -->
+  <div id="appView" class="hidden min-h-screen relative z-10 w-full flex flex-col">
+    <header class="sticky top-0 z-30 transition-shadow duration-300" id="mainHeader">
+      <div
+        class="h-16 bento-header backdrop-blur-md bg-white/70 border-b border-slate-200/60 px-6 lg:px-10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3">
+              </path>
+            </svg>
+          </div>
+          <div>
+            <h2 class="font-extrabold text-lg leading-none tracking-tight text-slate-900">LATAM en Datos</h2>
+            <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest leading-none mt-1">Global
+              Dashboard</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div class="hidden md:flex flex-col items-end mr-2">
+            <p id="userBadge" class="text-sm font-bold text-slate-800 leading-none"></p>
+            <span class="inline-flex items-center gap-1.5 mt-1 text-[10px] font-bold text-emerald-600 tracking-wider">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ONLINE
+            </span>
+          </div>
+          <button id="logoutBtn"
+            class="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors tooltip"
+            data-tip="Cerrar sesión">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- App Layout Bento -->
+    <div
+      class="max-w-[1600px] w-full mx-auto px-4 md:px-6 lg:px-10 py-6 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 xl:gap-8 flex-1">
+
+      <!-- Side Navigation UI -->
+      <aside class="flex flex-col gap-2 h-fit lg:sticky lg:top-24">
+        <p class="text-[10px] font-extrabold text-slate-400 mb-2 px-3 tracking-widest uppercase">Explorador</p>
+        <nav class="flex flex-col gap-1.5">
+          <button data-section="dashboard" class="nav-item nav-active">
+            <div class="nav-icon">📊</div> <span class="nav-text">Resumen General</span>
+          </button>
+          <button data-section="mapa" class="nav-item">
+            <div class="nav-icon">🗺️</div> <span class="nav-text">Radar Global</span>
+          </button>
+          <button data-section="comparador" class="nav-item">
+            <div class="nav-icon">⚖️</div> <span class="nav-text">Comparar Ciudades</span>
+          </button>
+          <button data-section="maslow" class="nav-item">
+            <div class="nav-icon">🔺</div> <span class="nav-text">Taxonomía Maslow</span>
+          </button>
+
+          <div class="h-px bg-slate-200/60 my-2 mx-3"></div>
+          <p class="text-[10px] font-extrabold text-slate-400 mb-2 px-3 tracking-widest uppercase">Comunidad</p>
+
+          <button data-section="embajadores" class="nav-item">
+            <div class="nav-icon">🎓</div> <span class="nav-text">Red Smithsonian</span>
+          </button>
+          <button data-section="comunidad" class="nav-item">
+            <div class="nav-icon">👥</div> <span class="nav-text">Actores Educativos</span>
+          </button>
+          <button data-section="proyectos" class="nav-item">
+            <div class="nav-icon">💡</div> <span class="nav-text">Proyectos Core</span>
+          </button>
+
+          <div class="h-px bg-slate-200/60 my-2 mx-3 hidden" id="divider-admin"></div>
+
+          <button id="uploadNav" data-section="carga"
+            class="nav-item hidden text-indigo-700 bg-indigo-50/50 border border-indigo-100 hover:bg-indigo-100">
+            <div class="nav-icon bg-indigo-100 text-indigo-600 shadow-sm">☁️</div> <span class="nav-text font-bold">Data
+              Ingestion</span>
+          </button>
+        </nav>
+      </aside>
+
+      <!-- Main Stages -->
+      <main class="w-full relative pb-10">
+
+        <!-- =================== DASHBOARD =================== -->
+        <section id="section-dashboard" class="stage-view active-stage">
+          <div class="flex items-end justify-between mb-8">
+            <div>
+              <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Panorámica Analítica</h1>
+              <p class="text-slate-500 font-medium mt-1">Métricas y recuento actual de la plataforma.</p>
+            </div>
+            <div
+              class="hidden sm:flex text-sm font-semibold bg-white border border-slate-200 shadow-sm rounded-full px-4 py-2 items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span> Datos sincronizados
+            </div>
+          </div>
+
+          <!-- Top Bento Stats -->
+          <div id="statsCards" class="grid grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-6 mb-8"></div>
+
+          <div class="grid xl:grid-cols-[1fr_350px] gap-6 xl:gap-8 mb-8">
+            <!-- Regiones Trending -->
+            <div class="bento-card p-6 md:p-8 col-span-1">
+              <div class="mb-6 flex justify-between items-center">
+                <h3 class="text-xl font-extrabold text-slate-900">Hubs Geográficos Destacados</h3>
+                <button class="text-indigo-600 text-sm font-bold hover:underline"
+                  onclick="document.querySelector('[data-section=\'mapa\']').click()">Abrir mapa global &rarr;</button>
+              </div>
+              <div class="grid md:grid-cols-3 gap-5">
+                <!-- Guatemala -->
+                <div class="region-card border border-rose-100 bg-gradient-to-b from-white to-rose-50/30 group">
+                  <div class="text-4xl mb-3 drop-shadow-sm group-hover:scale-110 transition-transform">🇬🇹</div>
+                  <h4 class="font-extrabold text-slate-800">Cdad. Guatemala</h4>
+                  <p class="text-xs font-semibold text-slate-500 mb-4">Mesoamérica</p>
+                  <div class="flex items-end justify-between">
+                    <span
+                      class="text-[10px] font-bold text-rose-600 uppercase tracking-wider bg-rose-100 px-2 py-1 rounded-md">Data
+                      Count</span>
+                    <span class="text-2xl font-black text-rose-600" id="card-guatemala-datos">0</span>
+                  </div>
+                </div>
+                <!-- Colombia -->
+                <div class="region-card border border-yellow-100 bg-gradient-to-b from-white to-yellow-50/30 group">
+                  <div class="text-4xl mb-3 drop-shadow-sm group-hover:scale-110 transition-transform">🇨🇴</div>
+                  <h4 class="font-extrabold text-slate-800">Ginebra</h4>
+                  <p class="text-xs font-semibold text-slate-500 mb-4">Valle del Cauca</p>
+                  <div class="flex items-end justify-between">
+                    <span
+                      class="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-yellow-100 px-2 py-1 rounded-md">Data
+                      Count</span>
+                    <span class="text-2xl font-black text-amber-600" id="card-ginebra-datos">0</span>
+                  </div>
+                </div>
+                <!-- Argentina -->
+                <div class="region-card border border-cyan-100 bg-gradient-to-b from-white to-cyan-50/30 group">
+                  <div class="text-4xl mb-3 drop-shadow-sm group-hover:scale-110 transition-transform">🇦🇷</div>
+                  <h4 class="font-extrabold text-slate-800">Bariloche</h4>
+                  <p class="text-xs font-semibold text-slate-500 mb-4">Araucanía / Sur</p>
+                  <div class="flex items-end justify-between">
+                    <span
+                      class="text-[10px] font-bold text-cyan-600 uppercase tracking-wider bg-cyan-100 px-2 py-1 rounded-md">Data
+                      Count</span>
+                    <span class="text-2xl font-black text-cyan-600" id="card-argentina-datos">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Categories Side panel -->
+            <div class="bento-card p-6 md:p-8 flex flex-col gap-6">
+              <div>
+                <h4 class="text-sm font-extrabold text-slate-400 uppercase tracking-widest mb-4">Jerarquía Maslow</h4>
+                <ul id="maslowStats" class="space-y-3 shrink-0"></ul>
+              </div>
+              <div class="h-px bg-slate-100 w-full"></div>
+              <div>
+                <h4 class="text-sm font-extrabold text-slate-400 uppercase tracking-widest mb-4">Distribución de
+                  Categorías</h4>
+                <ul id="categoryStats" class="space-y-3 shrink-0"></ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="bento-card p-4 md:p-6 mb-8 bg-white">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-xl font-extrabold text-slate-900">Mapa Rápido</h3>
+                <p class="text-slate-500 text-sm font-medium mt-1">Vista resumida de los puntos georreferenciados activos.</p>
+              </div>
+              <button id="openGlobalMapBtn"
+                class="bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl px-3 py-2 text-xs font-bold hover:bg-indigo-100 transition-colors shadow-sm">Abrir
+                Radar Global</button>
+            </div>
+            <div id="dashboardMap"
+              class="w-full h-[320px] rounded-[20px] shadow-inner bg-slate-100 z-0 relative overflow-hidden border border-slate-200/50">
+            </div>
+          </div>
+
+          <!-- ADMIN Management Box -->
+          <div id="adminUsersPanel"
+            class="hidden mb-8 border border-slate-200 bento-card p-6 md:p-8 overflow-hidden relative group">
+            <div class="absolute inset-0 bg-gradient-to-br from-indigo-50/80 to-slate-50/80 z-0"></div>
+            <div class="relative z-10">
+              <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-900 text-white flex justify-center items-center shadow-md">
+                  🛡️</div>
+                <div>
+                  <h4 class="font-black text-xl text-slate-900">Control Access Control</h4>
+                  <p class="text-xs font-bold text-indigo-600 uppercase tracking-wider mt-0.5">Admin Zone</p>
+                </div>
+              </div>
+
+              <form id="adminCreateUserForm" class="flex flex-wrap md:flex-nowrap gap-3 mb-6">
+                <input id="adminUsername" class="modern-input max-w-xs bg-white" placeholder="@usuario" required />
+                <input id="adminFullName" class="modern-input max-w-sm bg-white" placeholder="Ingeniería o Perfil"
+                  required />
+                <select id="adminRole" class="modern-input max-w-xs bg-white"></select>
+                <input id="adminPassword" type="password" class="modern-input max-w-xs bg-white"
+                  placeholder="Clave inicial" required />
+                <button class="btn-primary text-sm shrink-0 whitespace-nowrap px-6" type="submit">Crear Usuario</button>
+              </form>
+              <p id="adminUsersMsg" class="font-bold text-sm mb-4"></p>
+
+              <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="min-w-full text-sm text-left">
+                  <thead class="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th class="p-4 font-extrabold text-slate-500 uppercase tracking-wider text-[11px]">Usuario</th>
+                      <th class="p-4 font-extrabold text-slate-500 uppercase tracking-wider text-[11px]">Nombre</th>
+                      <th class="p-4 font-extrabold text-slate-500 uppercase tracking-wider text-[11px]">Permisos / Rol
+                      </th>
+                      <th class="p-4 font-extrabold text-slate-500 uppercase tracking-wider text-[11px] text-right">
+                        Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminUsersTable" class="divide-y divide-slate-100 font-medium"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- =================== MAPA GLOBAL =================== -->
+        <section id="section-mapa" class="stage-view flex flex-col h-[85vh] min-h-[600px] hidden">
+          <div class="flex items-end justify-between mb-4 shrink-0">
+            <div>
+              <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Radar Global</h1>
+              <p class="text-slate-500 font-medium mt-1">Intersección de la data geolocalizada en tiempo real.</p>
+            </div>
+          </div>
+
+          <div class="bento-card bg-white flex-1 p-3 flex flex-col gap-3 relative shadow-floating overflow-hidden">
+
+            <!-- Map Tools Ribbon -->
+            <div
+              class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 z-10 relative bg-slate-50 p-2 md:p-3 rounded-2xl border border-slate-200">
+              <div class="flex flex-wrap items-center gap-2">
+                <div id="regionFilterBar" class="flex flex-wrap gap-1.5"></div>
+                <div class="w-px h-6 bg-slate-300 mx-1 hidden lg:block"></div>
+                <select id="cityFilterSelect"
+                  class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 shadow-sm focus:outline-none focus:border-indigo-400 cursor-pointer appearance-none pr-8">
+                  <option value="ALL">🌆 Ciudades detectadas</option>
+                </select>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button id="clearCityBtn"
+                  class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm text-slate-600">Vaciar</button>
+                <button id="fitAllBtn"
+                  class="bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl px-3 py-2 text-xs font-bold hover:bg-indigo-100 transition-colors shadow-sm">Recentrar
+                  🌍</button>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 px-2" id="colorFilterBar"></div>
+
+            <!-- THE MAP -->
+            <div id="map"
+              class="flex-1 min-h-[380px] rounded-[20px] shadow-inner bg-slate-100 z-0 relative overflow-hidden border border-slate-200/50">
+            </div>
+          </div>
+        </section>
+
+        <!-- =================== COMPARADOR (NUEVA VISTA) =================== -->
+        <section id="section-comparador" class="stage-view hidden">
+          <div class="mb-8 max-w-3xl">
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Comparativa Geo-Psicológica</h1>
+            <p class="text-slate-500 font-medium mt-2">Selecciona hasta 3 locaciones (Ciudades o Regiones) para
+              contrastar su densidad de datos a través del Espectro Maslow y Categorías internas. Una herramienta UX
+              integral.</p>
+          </div>
+
+          <!-- Seleccion -->
+          <div class="bento-card p-6 bg-white mb-8">
+            <h3 class="font-extrabold text-slate-800 mb-4 whitespace-nowrap">Selector de Entidades (X, Y, Z)</h3>
+            <div class="grid md:grid-cols-3 gap-6">
+              <div>
+                <label class="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 tracking-widest"><span
+                    class="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-2"></span> Entidad Alfa</label>
+                <select id="compareSelect1" class="modern-input font-bold text-sm bg-indigo-50/30"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 tracking-widest"><span
+                    class="inline-block w-2 h-2 rounded-full bg-cyan-500 mr-2"></span> Entidad Beta</label>
+                <select id="compareSelect2" class="modern-input font-bold text-sm bg-cyan-50/30"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 tracking-widest"><span
+                    class="inline-block w-2 h-2 rounded-full bg-rose-500 mr-2"></span> Entidad Gamma</label>
+                <select id="compareSelect3" class="modern-input font-bold text-sm bg-rose-50/30"></select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráficas -->
+          <div class="grid lg:grid-cols-2 gap-6 xl:gap-8">
+            <div class="bento-card p-6 md:p-8 bg-white flex flex-col items-center">
+              <h4 class="font-extrabold text-slate-800 mb-6 text-center w-full">Perfil Psicográfico (Radar Maslow)</h4>
+              <div class="w-full max-w-sm aspect-square relative">
+                <canvas id="maslowRadarChart"></canvas>
+              </div>
+            </div>
+            <div class="bento-card p-6 md:p-8 bg-white flex flex-col items-center">
+              <h4 class="font-extrabold text-slate-800 mb-6 text-center w-full">Volumen de Registros por Tipo</h4>
+              <div class="w-full h-full min-h-[300px] relative">
+                <canvas id="categoryBarChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================== PIRAMIDE MASLOW =================== -->
+        <section id="section-maslow" class="stage-view hidden max-w-4xl mx-auto">
+          <div class="mb-10 text-center">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">Estructura Maslow</h1>
+            <p class="text-slate-500 font-medium mt-3 max-w-2xl mx-auto">Filtro multidimensional interactivo. Activa un
+              nivel para enrutar directamente la cámara geográfica a los puntos clave bajo ese espectro humano.</p>
+          </div>
+
+          <div class="maslow-container perspective-[1000px]">
+            <div class="maslow-pyramid mx-auto transform-gpu">
+              <!-- Nivel 5 -->
+              <button
+                class="m-level ml-5 w-[40%] bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-emerald-500/40"
+                data-maslow="Autorrealización" type="button">
+                <span class="m-icon">🚀</span><span class="m-label hidden sm:block">Autorrealización</span>
+                <div class="m-detail w-full flex justify-center text-xs opacity-70 mt-1 font-semibold">Cúspide</div>
+              </button>
+              <!-- Nivel 4 -->
+              <button class="m-level ml-4 w-[55%] bg-gradient-to-r from-cyan-400 to-blue-500 shadow-blue-500/30"
+                data-maslow="Reconocimiento" type="button">
+                <span class="m-icon">🏆</span><span class="m-label hidden sm:block">Reconocimiento</span>
+                <div class="m-detail w-full flex justify-center text-xs opacity-70 mt-1 font-semibold">Autoestima y
+                  Éxito</div>
+              </button>
+              <!-- Nivel 3 -->
+              <button class="m-level ml-3 w-[70%] bg-gradient-to-r from-amber-400 to-orange-500 shadow-orange-500/30"
+                data-maslow="Afiliación" type="button">
+                <span class="m-icon">🤝</span><span class="m-label hidden sm:block">Afiliación</span>
+                <div class="m-detail w-full flex justify-center text-xs opacity-70 mt-1 font-semibold">Emocional y
+                  Social</div>
+              </button>
+              <!-- Nivel 2 -->
+              <button class="m-level ml-2 w-[85%] bg-gradient-to-r from-rose-400 to-pink-600 shadow-pink-500/30"
+                data-maslow="Seguridad" type="button">
+                <span class="m-icon">🛡️</span><span class="m-label hidden sm:block">Seguridad</span>
+                <div class="m-detail w-full flex justify-center text-xs opacity-70 mt-1 font-semibold">Física, Salud,
+                  Familiar</div>
+              </button>
+              <!-- Nivel 1 -->
+              <button class="m-level ml-1 w-[100%] bg-gradient-to-r from-slate-600 to-slate-800 shadow-slate-900/40"
+                data-maslow="Fisiológicas" type="button">
+                <span class="m-icon">🍽️</span><span class="m-label hidden sm:block">Fisiológicas</span>
+                <div class="m-detail w-full flex justify-center text-xs opacity-70 mt-1 font-semibold">Respiración,
+                  Alimentación, Base</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-16 bento-card p-6 md:p-8">
+            <h4 class="flex items-center gap-3 font-extrabold text-slate-800 text-lg mb-6">
+              <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex justify-center items-center">⚡</div>
+              Registros Base Destacados
+            </h4>
+            <ul id="maslowData" class="grid sm:grid-cols-2 gap-4 text-sm font-medium"></ul>
+          </div>
+        </section>
+
+        <!-- =================== EMBAJADORES (SMITHSONIAN) =================== -->
+        <section id="section-embajadores" class="stage-view hidden">
+          <div class="mb-8">
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Hub de Embajadores Docentes</h1>
+            <p class="text-slate-500 font-medium mt-1">Conexión global NESST y marco referencial Smithsonian.</p>
+          </div>
+
+          <div class="grid lg:grid-cols-2 gap-6 xl:gap-8">
+            <!-- NESST -->
+            <div class="bento-card relative overflow-hidden group">
+              <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-800/5 z-0"></div>
+              <div
+                class="absolute -top-12 -right-12 text-9xl opacity-5 transform group-hover:scale-110 transition-transform duration-500">
+                🌱</div>
+              <div class="relative z-10 p-8">
+                <div
+                  class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center text-3xl mb-6 shadow-lg shadow-emerald-500/30">
+                  🌱</div>
+                <h4 class="font-black text-2xl text-emerald-950">Acuerdo NESST</h4>
+                <p class="text-sm mt-2 font-semibold text-emerald-700/80 mb-6">Malla de evidencias para embajadores
+                  latinoamericanos.</p>
+                <div class="w-full h-px bg-emerald-200/50 mb-6"></div>
+                <ul id="nesstList" class="text-sm space-y-3 font-bold text-emerald-900"></ul>
+              </div>
+            </div>
+
+            <!-- Smithsonian -->
+            <div class="bento-card relative overflow-hidden group">
+              <div class="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-800/5 z-0"></div>
+              <div
+                class="absolute -bottom-10 -right-10 text-9xl opacity-5 transform group-hover:rotate-12 transition-transform duration-500">
+                🏛️</div>
+              <div class="relative z-10 p-8">
+                <div
+                  class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center text-3xl mb-6 shadow-lg shadow-amber-500/30">
+                  🏛️</div>
+                <h4 class="font-black text-2xl text-amber-950">Guías Smithsonian</h4>
+                <p class="text-sm mt-2 font-semibold text-amber-700/80 mb-6">Biodiversidad, alimentación global
+                  sostenible y resiliencia.</p>
+                <div class="w-full h-px bg-amber-200/50 mb-6"></div>
+                <ul id="smithsonianList" class="text-sm space-y-3 font-bold text-amber-900"></ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================== COMUNIDAD =================== -->
+        <section id="section-comunidad" class="stage-view hidden">
+          <div class="mb-8 text-center max-w-2xl mx-auto">
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Eje Social & Académico</h1>
+            <p class="text-slate-500 font-medium mt-2">Visibilidad de puntos de interés segmentados por la matriz de
+              roles educativos activos en la red.</p>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-6">
+            <div class="bento-card p-8 bg-blue-50/20 border-blue-100 hover:border-blue-300 transition-colors">
+              <div
+                class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl mb-5">🎓
+              </div>
+              <h4 class="font-black text-blue-900 text-xl border-b-2 border-blue-200 pb-3 mb-4 inline-block">Estudiantes
+              </h4>
+              <ul id="studentData" class="text-sm space-y-3 font-semibold text-slate-600"></ul>
+            </div>
+
+            <div class="bento-card p-8 bg-purple-50/20 border-purple-100 hover:border-purple-300 transition-colors">
+              <div
+                class="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center text-2xl mb-5">
+                👨‍🏫</div>
+              <h4 class="font-black text-purple-900 text-xl border-b-2 border-purple-200 pb-3 mb-4 inline-block">
+                Docentes</h4>
+              <ul id="teacherData" class="text-sm space-y-3 font-semibold text-slate-600"></ul>
+            </div>
+
+            <div class="bento-card p-8 bg-rose-50/20 border-rose-100 hover:border-rose-300 transition-colors">
+              <div
+                class="w-12 h-12 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center text-2xl mb-5">🔬
+              </div>
+              <h4 class="font-black text-rose-900 text-xl border-b-2 border-rose-200 pb-3 mb-4 inline-block">
+                Investigadores</h4>
+              <ul id="researchData" class="text-sm space-y-3 font-semibold text-slate-600"></ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================== PROYECTOS =================== -->
+        <section id="section-proyectos" class="stage-view hidden max-w-4xl mx-auto">
+          <div class="mb-8 flex items-end justify-between border-b border-slate-200 pb-6">
+            <div>
+              <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Vitrina Core</h1>
+              <p class="text-slate-500 font-medium mt-1">Implementaciones y microservicios satélite que consumen la API
+                central.</p>
+            </div>
+            <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-2xl">💡</div>
+          </div>
+
+          <ul id="projectsList" class="space-y-4"></ul>
+        </section>
+
+        <!-- =================== CARGA INGESTION =================== -->
+        <section id="section-carga" class="stage-view hidden max-w-3xl mx-auto">
+          <div class="text-center mb-10">
+            <div
+              class="inline-flex items-center justify-center w-20 h-20 rounded-[1.5rem] bg-indigo-600 text-white text-4xl shadow-xl shadow-indigo-500/30 mb-6 rotate-3 hover:rotate-0 transition-transform">
+              ⚡</div>
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">Motor de Ingesta</h1>
+            <p class="text-slate-500 font-medium mt-3">Procesa volcados masivos (.JSON/.CSV) con georreferenciación
+              instantánea sobre la matriz central. Tienes disponible el archivo <a href="datos-prueba.json"
+                target="_blank" class="text-indigo-600 underline font-bold">datos-prueba.json</a> como piloto.</p>
+          </div>
+
+          <div class="bento-card p-6 md:p-10 border-indigo-100 bg-white shadow-floating">
+            <form id="uploadForm" class="grid gap-6">
+              <div class="relative group">
+                <label for="uploadFile"
+                  class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-indigo-200 rounded-2xl cursor-pointer bg-indigo-50/30 hover:bg-indigo-50/80 transition-all group-hover:border-indigo-400">
+                  <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                    <div
+                      class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-indigo-500 mb-3 group-hover:scale-110 transition-transform">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-6 h-6" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                      </svg>
+                    </div>
+                    <p class="text-sm font-extrabold text-indigo-900">Seleccionar Dataset</p>
+                    <p class="text-[10px] font-bold text-slate-400 mt-1">.CSV o .JSON admitidos</p>
+                  </div>
+                  <input id="uploadFile" type="file" accept=".json,.csv" class="hidden" />
+                </label>
+              </div>
+
+              <div class="flex items-center gap-4 py-2">
+                <div class="h-px bg-slate-200 flex-1"></div>
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Ingreso Manual
+                  Payload</span>
+                <div class="h-px bg-slate-200 flex-1"></div>
+              </div>
+
+              <div>
+                <textarea id="uploadJson"
+                  class="modern-input w-full font-mono text-[11px] min-h-[160px] leading-relaxed resize-y"
+                  placeholder='[ { "title": "Objeto", "lat": 0, "lng": 0, "color": "#000" } ]'></textarea>
+              </div>
+
+              <button type="submit" class="w-full btn-primary text-base py-4 mt-2 shadow-xl shadow-indigo-500/20 group">
+                Emitir Transacción DB <span
+                  class="inline-block ml-2 group-hover:translate-x-1 transition-transform">&rarr;</span>
+              </button>
+            </form>
+            <div id="uploadMsg" class="text-sm mt-5 font-bold text-center p-3 rounded-xl hidden"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="./app.js"></script>
+</body>
+
+</html>

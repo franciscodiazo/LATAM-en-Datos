@@ -1,0 +1,18 @@
+[
+  {
+    "id": "p-1",
+    "title": "Modelo de alerta territorial educativa",
+    "summary": "Uso de API de LATAM en Datos para priorizar intervención estudiantil.",
+    "owner": "Equipo de Investigación Territorial",
+    "createdAt": "2026-02-27T00:57:51.879Z",
+    "source": "API /api/data + /api/map/points"
+  },
+  {
+    "id": "p-2",
+    "title": "Análisis comparado de necesidades Maslow por región",
+    "summary": "Cruce de niveles de Maslow con variables ODS.",
+    "owner": "Red de Docentes Embajadores NESST",
+    "createdAt": "2026-02-26T00:57:51.879Z",
+    "source": "Exportación GeoJSON"
+  }
+]

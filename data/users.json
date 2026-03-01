@@ -1,0 +1,44 @@
+[
+  {
+    "id": "u-admin",
+    "username": "admin",
+    "fullName": "Administrador LATAM",
+    "role": "ADMIN",
+    "passwordHash": "$2a$10$QhpEWuPD7BWHjrLKfepyBuRwwAqPLtFd7QD5NLk8jNVtHVFb3SP1C"
+  },
+  {
+    "id": "u-agente",
+    "username": "agente",
+    "fullName": "Agente Autorizado",
+    "role": "AGENTE_AUTORIZADO",
+    "passwordHash": "$2a$10$QhpEWuPD7BWHjrLKfepyBuRwwAqPLtFd7QD5NLk8jNVtHVFb3SP1C"
+  },
+  {
+    "id": "u-nesst",
+    "username": "nesst",
+    "fullName": "Docente Embajador NESST",
+    "role": "DOCENTE_EMBAJADOR_NESST",
+    "passwordHash": "$2a$10$QhpEWuPD7BWHjrLKfepyBuRwwAqPLtFd7QD5NLk8jNVtHVFb3SP1C"
+  },
+  {
+    "id": "u-invest",
+    "username": "investigador",
+    "fullName": "Investigador Grupo Focal",
+    "role": "INVESTIGADOR",
+    "passwordHash": "$2a$10$QhpEWuPD7BWHjrLKfepyBuRwwAqPLtFd7QD5NLk8jNVtHVFb3SP1C"
+  },
+  {
+    "id": "u-docente",
+    "username": "docente",
+    "fullName": "Docente General",
+    "role": "DOCENTE",
+    "passwordHash": "$2a$10$QhpEWuPD7BWHjrLKfepyBuRwwAqPLtFd7QD5NLk8jNVtHVFb3SP1C"
+  },
+  {
+    "id": "u-estudiante",
+    "username": "estudiante",
+    "fullName": "Estudiante",
+    "role": "ESTUDIANTE",
+    "passwordHash": "$2a$10$QhpEWuPD7BWHjrLKfepyBuRwwAqPLtFd7QD5NLk8jNVtHVFb3SP1C"
+  }
+]

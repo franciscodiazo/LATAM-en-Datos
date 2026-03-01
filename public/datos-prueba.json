@@ -1,0 +1,122 @@
+[
+    {
+        "title": "IE Sede Principal Ginebra",
+        "category": "MASLOW",
+        "maslowLevel": "Autorrealización",
+        "lat": 3.729,
+        "lng": -76.265,
+        "color": "#10b981",
+        "cityName": "Ginebra",
+        "description": "Escuela principal y centro educativo."
+    },
+    {
+        "title": "Comedor Comunitario",
+        "category": "MASLOW",
+        "maslowLevel": "Fisiológicas",
+        "lat": 3.721,
+        "lng": -76.261,
+        "color": "#64748b",
+        "cityName": "Ginebra",
+        "description": "Sitio de alimentación para la comunidad."
+    },
+    {
+        "title": "Hospital Rosario",
+        "category": "MASLOW",
+        "maslowLevel": "Seguridad",
+        "lat": 3.724,
+        "lng": -76.258,
+        "color": "#ec4899",
+        "cityName": "Ginebra",
+        "description": "Centro médico principal."
+    },
+    {
+        "title": "Plaza Principal Ginebra",
+        "category": "MASLOW",
+        "maslowLevel": "Afiliación",
+        "lat": 3.728,
+        "lng": -76.264,
+        "color": "#f59e0b",
+        "cityName": "Ginebra",
+        "description": "Lugar de encuentro comunal."
+    },
+    {
+        "title": "Universidad San Carlos",
+        "category": "MASLOW",
+        "maslowLevel": "Autorrealización",
+        "lat": 14.582,
+        "lng": -90.552,
+        "color": "#10b981",
+        "cityName": "Cdad de Guatemala",
+        "description": "Universidad nacional de Guatemala."
+    },
+    {
+        "title": "Mercado Central",
+        "category": "MASLOW",
+        "maslowLevel": "Fisiológicas",
+        "lat": 14.634,
+        "lng": -90.513,
+        "color": "#64748b",
+        "cityName": "Cdad de Guatemala",
+        "description": "Suministro alimenticio fundamental."
+    },
+    {
+        "title": "Plaza de la Constitución",
+        "category": "MASLOW",
+        "maslowLevel": "Afiliación",
+        "lat": 14.643,
+        "lng": -90.513,
+        "color": "#f59e0b",
+        "cityName": "Cdad de Guatemala",
+        "description": "Punto de agrupación principal."
+    },
+    {
+        "title": "Ministerio de Gobernación",
+        "category": "MASLOW",
+        "maslowLevel": "Seguridad",
+        "lat": 14.631,
+        "lng": -90.518,
+        "color": "#ec4899",
+        "cityName": "Cdad de Guatemala",
+        "description": "Sede de seguridad metropolitana."
+    },
+    {
+        "title": "Centro Cívico Bariloche",
+        "category": "MASLOW",
+        "maslowLevel": "Afiliación",
+        "lat": -41.133,
+        "lng": -71.310,
+        "color": "#f59e0b",
+        "cityName": "Bariloche",
+        "description": "Turismo y cultura local."
+    },
+    {
+        "title": "Hospital Zonal",
+        "category": "MASLOW",
+        "maslowLevel": "Seguridad",
+        "lat": -41.136,
+        "lng": -71.306,
+        "color": "#ec4899",
+        "cityName": "Bariloche",
+        "description": "Salud local."
+    },
+    {
+        "title": "Cerro Catedral",
+        "category": "MASLOW",
+        "maslowLevel": "Reconocimiento",
+        "lat": -41.171,
+        "lng": -71.439,
+        "color": "#0ea5e9",
+        "cityName": "Bariloche",
+        "description": "Centro turístico de élite y reconocimiento deportivo."
+    },
+    {
+        "title": "Instituto Balseiro",
+        "category": "MASLOW",
+        "maslowLevel": "Autorrealización",
+        "lat": -41.119,
+        "lng": -71.417,
+        "color": "#10b981",
+        "cityName": "Bariloche",
+        "description": "Polo científico en Argentina."
+    }
+]

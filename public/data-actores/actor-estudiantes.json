@@ -1,0 +1,27 @@
+{
+  "actor": "ESTUDIANTE",
+  "title": "Estudiantes",
+  "items": [
+    {
+      "tema": "Diversidad dietética",
+      "accion": "Registro semanal de grupos alimenticios consumidos",
+      "indicador": "Diversidad dietética básica diaria",
+      "ods": "ODS 12.2",
+      "instrumento": "Encuesta estudiantil"
+    },
+    {
+      "tema": "Mapa de abastecimiento local",
+      "accion": "Ubicación de huertas, ferias y mercados",
+      "indicador": "Diversidad de fuentes locales de alimentos",
+      "ods": "ODS 12.2",
+      "instrumento": "Mapeo comunitario"
+    },
+    {
+      "tema": "Observación ambiental",
+      "accion": "Identificación de puntos críticos de residuos y agua",
+      "indicador": "Puntos críticos ambientales mapeados",
+      "ods": "ODS 15.9",
+      "instrumento": "Ficha de campo"
+    }
+  ]
+}

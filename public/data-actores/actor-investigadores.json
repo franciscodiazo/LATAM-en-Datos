@@ -1,0 +1,27 @@
+{
+  "actor": "INVESTIGADOR",
+  "title": "Investigadores",
+  "items": [
+    {
+      "tema": "Análisis de vulnerabilidad alimentaria",
+      "accion": "Cruce territorial de acceso a alimentos y riesgo ambiental",
+      "indicador": "Dificultad frecuente de acceso a alimentos",
+      "ods": "ODS 12.3",
+      "instrumento": "Análisis comparativo"
+    },
+    {
+      "tema": "Resiliencia ecosistémica",
+      "accion": "Series temporales de eventos ambientales y adaptación local",
+      "indicador": "Frecuencia de eventos ambientales",
+      "ods": "ODS 13.3 / 15.5",
+      "instrumento": "Línea de tiempo comunitaria"
+    },
+    {
+      "tema": "Gobernanza socioambiental",
+      "accion": "Evaluación de participación comunitaria y políticas locales",
+      "indicador": "Participación comunitaria ambiental",
+      "ods": "ODS 15.9 / 6.b",
+      "instrumento": "Encuesta + entrevistas"
+    }
+  ]
+}

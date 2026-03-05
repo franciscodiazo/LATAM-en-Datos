@@ -9,10 +9,14 @@ const state = {
   lastDashboardPoints: [],
   socket: null,
   recordsCache: [],
+  platformMapPoints: [],
   mapPoints: [],
+  currentMapDataset: 'platform',
+  coreProjectsById: {},
   activeColorFilter: 'ALL',
   activeRegionFilter: 'ALL',
   activeCityFilter: 'ALL',
+  activeIndicatorFilter: 'ALL',
   activeMaslowFilter: 'ALL',
   charts: {
     maslowRadar: null,
@@ -37,17 +41,51 @@ const fitAllBtn = document.getElementById('fitAllBtn');
 const mapStatsCards = document.getElementById('mapStatsCards');
 const regionFilterBar = document.getElementById('regionFilterBar');
 const cityFilterSelect = document.getElementById('cityFilterSelect');
+const mapIndicatorFilter = document.getElementById('mapIndicatorFilter');
 const clearCityBtn = document.getElementById('clearCityBtn');
 const openGlobalMapBtn = document.getElementById('openGlobalMapBtn');
+const mapDatasetSelect = document.getElementById('mapDatasetSelect');
+const projectCoreSelect = document.getElementById('projectCoreSelect');
+const projectCoreMeta = document.getElementById('projectCoreMeta');
+const projectCoreDataView = document.getElementById('projectCoreDataView');
+const ingestionDatasetSelect = document.getElementById('ingestionDatasetSelect');
+const loadDatasetToTextareaBtn = document.getElementById('loadDatasetToTextareaBtn');
+const uploadSelectedDatasetBtn = document.getElementById('uploadSelectedDatasetBtn');
+const compareIndicatorFilter = document.getElementById('compareIndicatorFilter');
+const compareDateFrom = document.getElementById('compareDateFrom');
+const compareDateTo = document.getElementById('compareDateTo');
+const compareNesstIndicators = document.getElementById('compareNesstIndicators');
+const compareNesstHint = document.getElementById('compareNesstHint');
+const compareActiveChips = document.getElementById('compareActiveChips');
+
+const INDICATOR_LABELS = {
+  WATER: 'Agua potable',
+  WASTE: 'Residuos',
+  CONNECTIVITY: 'Conectividad digital',
+  INFRASTRUCTURE: 'Infraestructura escolar',
+  OTHER: 'Otro'
+};
+
+const CORE_PROJECT_FILES = [
+  '/data-core/core-food.json',
+  '/data-core/core-resiliencia-ecosistemica.json',
+  '/data-core/core-capacidad-comunitaria.json'
+];
+
+const ACTOR_FILES = {
+  studentData: '/data-actores/actor-estudiantes.json',
+  teacherData: '/data-actores/actor-docentes.json',
+  researchData: '/data-actores/actor-investigadores.json'
+};
 
 // SECTIONS
 const sectionIds = ['dashboard', 'mapa', 'comparador', 'maslow', 'embajadores', 'comunidad', 'proyectos', 'carga'];
 
 // Regions for quick focus
 const REGION_PRESETS = {
-  GINEBRA: { label: 'Ginebra (Valle)', bounds: { minLat: 3.69, maxLat: 3.74, minLng: -76.28, maxLng: -76.25 } },
-  GUATEMALA: { label: 'Guatemala', bounds: { minLat: 13.5, maxLat: 18.0, minLng: -92.4, maxLng: -88.0 } },
-  ARGENTINA: { label: 'Argentina', bounds: { minLat: -55.2, maxLat: -21.5, minLng: -73.7, maxLng: -53.5 } },
+  GINEBRA: { label: 'Ginebra (Valle del Cauca)', bounds: { minLat: 3.69, maxLat: 3.74, minLng: -76.28, maxLng: -76.25 } },
+  GUATEMALA: { label: 'Ciudad de Guatemala', bounds: { minLat: 14.53, maxLat: 14.74, minLng: -90.65, maxLng: -90.43 } },
+  ARGENTINA: { label: 'Posadas (Misiones)', bounds: { minLat: -27.52, maxLat: -27.30, minLng: -55.99, maxLng: -55.83 } },
   ALL: { label: 'Latam Global', bounds: null }
 };
 
@@ -59,28 +97,55 @@ const MASLOW_COLORS = {
   'Fisiológicas': '#64748b'
 };
 
+const API_BASE = localStorage.getItem('latam_api_base') || (window.location.port === '3001' ? '' : 'http://localhost:3001');
+
+function apiUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${API_BASE}${path}`;
+}
+
+async function parseJsonResponse(response) {
+  const raw = await response.text();
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const preview = raw.trim().slice(0, 60).toLowerCase();
+    if (preview.startsWith('<!doctype') || preview.startsWith('<html')) {
+      throw new Error('La API devolvió HTML y no JSON. Abre la app desde http://localhost:3001 o configura latam_api_base.');
+    }
+    throw new Error('La API devolvió una respuesta inválida (no JSON).');
+  }
+}
+
+function logout() {
+  localStorage.removeItem('latam_token');
+  state.token = '';
+  state.user = null;
+}
+
 // API HELPERS
 function authHeaders() {
   return { Authorization: `Bearer ${state.token}` };
 }
 
 async function apiGet(path) {
-  const response = await fetch(path, { headers: authHeaders() });
+  const response = await fetch(apiUrl(path), { headers: authHeaders() });
   if (response.status === 401) { logout(); throw new Error('Sesión expirada.'); }
+  const payload = await parseJsonResponse(response).catch(() => ({}));
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
     throw new Error(payload.message || 'Error de solicitud.');
   }
-  return response.json();
+  return payload;
 }
 
 async function apiSend(path, method, body) {
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     method,
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
   });
-  const payload = await response.json().catch(() => ({}));
+  const payload = await parseJsonResponse(response).catch(() => ({}));
   if (!response.ok) throw new Error(payload.message || 'Error de solicitud.');
   return payload;
 }
@@ -211,8 +276,8 @@ function inferCity(point) {
 
   const text = `${point.title || ''} ${point.projectName || ''}`.toLowerCase();
 
-  if (text.includes('guatemala')) return 'Cdad de Guatemala';
-  if (text.includes('bariloche') || point.lat < -40) return 'Bariloche';
+  if (text.includes('guatemala')) return 'Ciudad de Guatemala';
+  if (text.includes('posadas') || text.includes('misiones')) return 'Posadas';
   if (text.includes('ginebra')) return 'Ginebra';
 
   const dict = ['bogotá', 'medellín', 'quito', 'lima', 'caracas', 'santiago', 'buenos aires'];
@@ -220,6 +285,69 @@ function inferCity(point) {
   if (found) return found.replace(/\b\w/g, char => char.toUpperCase());
 
   return 'Desconocida';
+}
+
+function inferIndicatorCode(point) {
+  if (point.indicatorCode) return point.indicatorCode;
+  const text = `${point.title || ''} ${point.description || ''} ${point.siteType || ''} ${point.category || ''}`.toLowerCase();
+  if (text.includes('agua') || text.includes('acueduct')) return 'WATER';
+  if (text.includes('residu') || text.includes('basura') || text.includes('recicl')) return 'WASTE';
+  if (text.includes('conect') || text.includes('internet') || text.includes('digital')) return 'CONNECTIVITY';
+  if (text.includes('infraestructura') || text.includes('escuela') || text.includes('colegio') || text.includes('aula')) return 'INFRASTRUCTURE';
+  return 'OTHER';
+}
+
+function formatIndicatorLabel(code) {
+  return INDICATOR_LABELS[code] || code;
+}
+
+function toDateOnly(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function mapSmithsonianBucket(point) {
+  const raw = String(point.smithsonianGuide || '').toLowerCase();
+  if (raw.includes('aliment')) return 'ALIMENTACION';
+  if (raw.includes('comun')) return 'COMUNIDADES';
+  if (raw.includes('resilien') || raw.includes('ecos')) return 'ECOSISTEMAS';
+  return 'COMUNIDADES';
+}
+
+function getSelectedNesstBuckets() {
+  if (!compareNesstIndicators) return ['ALIMENTACION', 'COMUNIDADES', 'ECOSISTEMAS'];
+  const checked = [...compareNesstIndicators.querySelectorAll('input[type="checkbox"]:checked')].map((input) => input.value);
+  return checked;
+}
+
+function renderCompareActiveChips() {
+  if (!compareActiveChips) return;
+
+  const selectedNesst = getSelectedNesstBuckets();
+  const nesstLabel = selectedNesst.length
+    ? `NESST: ${selectedNesst
+        .map((key) => {
+          if (key === 'ALIMENTACION') return 'Alimentación';
+          if (key === 'COMUNIDADES') return 'Comunidades Sostenibles';
+          if (key === 'ECOSISTEMAS') return 'Ecosistemas Resilientes';
+          return key;
+        })
+        .join(' · ')}`
+    : 'NESST: sin selección';
+
+  const indicator = compareIndicatorFilter?.value || 'ALL';
+  const indicatorLabel = `Indicador: ${indicator === 'ALL' ? 'Todos' : formatIndicatorLabel(indicator)}`;
+  const fromDate = compareDateFrom?.value || 'Inicio';
+  const toDate = compareDateTo?.value || 'Hoy';
+  const dateLabel = `Periodo: ${fromDate} → ${toDate}`;
+
+  const chips = [nesstLabel, indicatorLabel, dateLabel]
+    .map((label) => `<span class="inline-flex items-center px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-[11px] font-bold text-indigo-700">${label}</span>`)
+    .join('');
+
+  compareActiveChips.innerHTML = chips;
 }
 
 function renderCityFilterOptions(pointsByRegion) {
@@ -230,6 +358,26 @@ function renderCityFilterOptions(pointsByRegion) {
     options.push(`<option value="${city}" ${city === state.activeCityFilter ? 'selected' : ''}>${city}</option>`);
   });
   cityFilterSelect.innerHTML = options.join('');
+}
+
+function renderIndicatorFilterOptions(points) {
+  if (!mapIndicatorFilter) return;
+  const set = new Set(points.map((p) => inferIndicatorCode(p)));
+  const codes = [...set].sort((a, b) => formatIndicatorLabel(a).localeCompare(formatIndicatorLabel(b)));
+  const options = ['<option value="ALL">📌 Todos los indicadores</option>'];
+  codes.forEach((code) => {
+    options.push(`<option value="${code}" ${code === state.activeIndicatorFilter ? 'selected' : ''}>${formatIndicatorLabel(code)}</option>`);
+  });
+  mapIndicatorFilter.innerHTML = options.join('');
+}
+
+function buildComparisonIndicatorOptions(points) {
+  if (!compareIndicatorFilter) return;
+  const set = new Set(points.map((p) => inferIndicatorCode(p)));
+  const codes = [...set].sort((a, b) => formatIndicatorLabel(a).localeCompare(formatIndicatorLabel(b)));
+  compareIndicatorFilter.innerHTML =
+    '<option value="ALL">Todos los indicadores</option>' +
+    codes.map((code) => `<option value="${code}">${formatIndicatorLabel(code)}</option>`).join('');
 }
 
 function renderRegionFilters() {
@@ -245,8 +393,9 @@ function getFilteredPoints() {
   const pointsByReg = getPointsByRegion();
   const pointsByCity = state.activeCityFilter === 'ALL' ? pointsByReg : pointsByReg.filter(p => inferCity(p) === state.activeCityFilter);
   const ptM = state.activeMaslowFilter === 'ALL' ? pointsByCity : pointsByCity.filter(p => p.maslowLevel === state.activeMaslowFilter);
-  if (state.activeColorFilter === 'ALL') return ptM;
-  return ptM.filter(p => (p.color || '#2563EB').toUpperCase() === state.activeColorFilter);
+  const ptI = state.activeIndicatorFilter === 'ALL' ? ptM : ptM.filter((p) => inferIndicatorCode(p) === state.activeIndicatorFilter);
+  if (state.activeColorFilter === 'ALL') return ptI;
+  return ptI.filter(p => (p.color || '#2563EB').toUpperCase() === state.activeColorFilter);
 }
 
 function getPointsByRegion() {
@@ -288,6 +437,7 @@ function renderPoints(points, options = {}) {
 function refreshMapView() {
   renderDashboardMapPoints(state.mapPoints);
   renderRegionFilters();
+  renderIndicatorFilterOptions(state.mapPoints);
   const allPtsReg = getPointsByRegion();
   renderCityFilterOptions(allPtsReg);
   const finalPts = getFilteredPoints();
@@ -312,6 +462,8 @@ function initComparisonEngine() {
   const c3 = document.getElementById('compareSelect3');
   if (!c1) return;
 
+  buildComparisonIndicatorOptions(state.mapPoints);
+
   const allCities = [...new Set(state.mapPoints.map(p => inferCity(p)))].filter(c => c !== 'Desconocida').sort();
 
   const fill = (el, defIdx) => {
@@ -321,15 +473,51 @@ function initComparisonEngine() {
   fill(c1, 0); fill(c2, 1); fill(c3, 2);
 
   const draw = () => drawComparingCharts([c1.value, c2.value, c3.value].filter(Boolean));
-  [c1, c2, c3].forEach(el => el.addEventListener('change', draw));
+  c1.onchange = draw;
+  c2.onchange = draw;
+  c3.onchange = draw;
+  if (compareIndicatorFilter) compareIndicatorFilter.onchange = draw;
+  if (compareDateFrom) compareDateFrom.onchange = draw;
+  if (compareDateTo) compareDateTo.onchange = draw;
+  if (compareNesstIndicators) {
+    compareNesstIndicators.onchange = draw;
+  }
   draw();
 }
 
+function filterPointsForComparison(points) {
+  const indicator = compareIndicatorFilter?.value || 'ALL';
+  const fromDate = compareDateFrom?.value || '';
+  const toDate = compareDateTo?.value || '';
+  const selectedNesst = getSelectedNesstBuckets();
+
+  if (!selectedNesst.length) {
+    if (compareNesstHint) compareNesstHint.classList.remove('hidden');
+    return [];
+  }
+  if (compareNesstHint) compareNesstHint.classList.add('hidden');
+
+  return points.filter((point) => {
+    const indicatorOk = indicator === 'ALL' ? true : inferIndicatorCode(point) === indicator;
+    if (!indicatorOk) return false;
+    const nesstOk = selectedNesst.includes(mapSmithsonianBucket(point));
+    if (!nesstOk) return false;
+    const day = toDateOnly(point.measurementDate || point.createdAt);
+    if (fromDate && day && day < fromDate) return false;
+    if (toDate && day && day > toDate) return false;
+    return true;
+  });
+}
+
 function drawComparingCharts(cities) {
+  renderCompareActiveChips();
+
   if (state.charts.maslowRadar) state.charts.maslowRadar.destroy();
   if (state.charts.categoryBar) state.charts.categoryBar.destroy();
 
   if (cities.length === 0) return;
+
+  const points = filterPointsForComparison(state.mapPoints);
 
   const maslowLevels = ['Fisiológicas', 'Seguridad', 'Afiliación', 'Reconocimiento', 'Autorrealización'];
   const pColors = ['rgba(79, 70, 229, 0.4)', 'rgba(14, 165, 233, 0.4)', 'rgba(236, 72, 153, 0.4)'];
@@ -337,7 +525,7 @@ function drawComparingCharts(cities) {
 
   // Radar Data
   const radarDatasets = cities.map((city, idx) => {
-    const pts = state.mapPoints.filter(p => inferCity(p) === city);
+    const pts = points.filter(p => inferCity(p) === city);
     const data = maslowLevels.map(lvl => pts.filter(p => p.maslowLevel === lvl).length);
     return {
       label: city,
@@ -361,11 +549,11 @@ function drawComparingCharts(cities) {
 
   // Bar Data (Categories)
   const catSet = new Set();
-  state.mapPoints.forEach(p => catSet.add(p.category || 'Otro'));
+  points.forEach(p => catSet.add(p.category || 'Otro'));
   const cats = [...catSet];
 
   const barDatasets = cities.map((city, idx) => {
-    const pts = state.mapPoints.filter(p => inferCity(p) === city);
+    const pts = points.filter(p => inferCity(p) === city);
     const data = cats.map(c => pts.filter(p => (p.category || 'Otro') === c).length);
     return {
       label: city,
@@ -407,6 +595,148 @@ function renderDashboard(data) {
   if (cs) cs.innerHTML = Object.entries(data.byCategory || {}).map(([k, v]) => `<li class="flex justify-between items-center text-[13px]"><span class="font-bold text-slate-600">${k}</span><span class="bg-emerald-100 text-emerald-700 font-extrabold px-2 py-0.5 rounded-full">${v}</span></li>`).join('');
 }
 
+function renderRecentProjects(projects = []) {
+  const projectsList = document.getElementById('projectsList');
+  if (!projectsList) return;
+
+  if (!projects.length) {
+    projectsList.innerHTML = '<li class="bento-card p-4 text-sm text-slate-500">Sin proyectos recientes.</li>';
+    return;
+  }
+
+  projectsList.innerHTML = projects.map((project) => `
+    <li class="bento-card p-5 bg-white">
+      <h4 class="font-extrabold text-slate-900">${project.title || 'Proyecto'}</h4>
+      <p class="text-sm text-slate-600 mt-1">${project.summary || ''}</p>
+      <div class="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
+        <span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg">${project.owner || 'Sin responsable'}</span>
+        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-lg">${project.source || 'Sin fuente'}</span>
+      </div>
+    </li>
+  `).join('');
+}
+
+async function fetchPublicJson(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`No se pudo cargar ${path}`);
+  return response.json();
+}
+
+function extractRecordsFromPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.records)) return payload.records;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+}
+
+function getCoreDatasetPoints(datasetId) {
+  const project = state.coreProjectsById[datasetId];
+  const mapPoints = Array.isArray(project?.mapPoints) ? project.mapPoints : [];
+  return mapPoints.filter((point) => Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng))).map((point) => ({
+    ...point,
+    lat: Number(point.lat),
+    lng: Number(point.lng)
+  }));
+}
+
+function applyMapDataset(datasetId = 'platform') {
+  state.currentMapDataset = datasetId;
+  state.activeRegionFilter = 'ALL';
+  state.activeCityFilter = 'ALL';
+  state.activeIndicatorFilter = 'ALL';
+
+  if (datasetId === 'platform') {
+    state.mapPoints = state.platformMapPoints;
+  } else {
+    state.mapPoints = getCoreDatasetPoints(datasetId);
+  }
+
+  if (cityFilterSelect) cityFilterSelect.value = 'ALL';
+  if (mapIndicatorFilter) mapIndicatorFilter.value = 'ALL';
+  refreshMapView();
+}
+
+function renderProjectCoreData(project) {
+  if (!projectCoreDataView) return;
+  if (!project || !Array.isArray(project.records)) {
+    projectCoreDataView.innerHTML = '<div class="bento-card p-4 text-sm text-rose-600">Sin datos para este proyecto.</div>';
+    return;
+  }
+
+  if (projectCoreMeta) {
+    const ods = (project.focusOds || []).join(' · ');
+    projectCoreMeta.textContent = `${project.summary || ''}${ods ? ` | ${ods}` : ''}`;
+  }
+
+  projectCoreDataView.innerHTML = project.records.map((record) => `
+    <article class="bento-card p-4 bg-white">
+      <h5 class="font-extrabold text-slate-900 text-sm">${record.indicator || 'Indicador'}</h5>
+      <p class="text-xs text-slate-500 mt-1">${record.ods || ''} · Meta ${record.meta || 'N/A'}</p>
+      <p class="text-xs text-slate-600 mt-2"><strong>Tipo:</strong> ${record.tipoDato || 'N/A'}</p>
+      <p class="text-xs text-slate-600"><strong>Instrumento:</strong> ${record.instrumento || 'N/A'}</p>
+      <p class="text-xs text-slate-600"><strong>Valor ejemplo:</strong> ${record.valorEjemplo ?? 'N/A'} ${record.unidad || ''}</p>
+      <p class="text-xs text-slate-500 mt-2 italic">${record.territorio || ''}</p>
+    </article>
+  `).join('');
+}
+
+async function loadCoreProjectsData() {
+  if (!projectCoreSelect) return;
+
+  const payloads = await Promise.all(CORE_PROJECT_FILES.map((path) => fetchPublicJson(path)));
+  const valid = payloads.filter((item) => item?.projectId);
+  state.coreProjectsById = valid.reduce((acc, item) => {
+    acc[item.projectId] = item;
+    return acc;
+  }, {});
+
+  projectCoreSelect.innerHTML = valid.map((project, index) =>
+    `<option value="${project.projectId}" ${index === 0 ? 'selected' : ''}>${project.title}</option>`
+  ).join('');
+
+  const getProject = (projectId) => valid.find((project) => project.projectId === projectId);
+  renderProjectCoreData(getProject(valid[0]?.projectId));
+
+  projectCoreSelect.onchange = (event) => {
+    renderProjectCoreData(getProject(event.target.value));
+  };
+
+  if (state.currentMapDataset !== 'platform') {
+    applyMapDataset(state.currentMapDataset);
+  }
+}
+
+function renderActorItems(targetId, payload) {
+  const element = document.getElementById(targetId);
+  if (!element) return;
+
+  const rows = Array.isArray(payload?.items) ? payload.items : [];
+  if (!rows.length) {
+    element.innerHTML = '<li>Sin datos disponibles.</li>';
+    return;
+  }
+
+  element.innerHTML = rows.map((row) => `
+    <li class="bg-white/60 border border-slate-100 rounded-xl p-3">
+      <p class="font-bold text-slate-700">${row.tema || 'Tema'}</p>
+      <p class="text-xs mt-1">${row.accion || ''}</p>
+      <p class="text-[11px] mt-2 text-slate-500">${row.indicador || ''} · ${row.ods || ''}</p>
+    </li>
+  `).join('');
+}
+
+async function loadEducationalActorsData() {
+  const [students, teachers, researchers] = await Promise.all([
+    fetchPublicJson(ACTOR_FILES.studentData),
+    fetchPublicJson(ACTOR_FILES.teacherData),
+    fetchPublicJson(ACTOR_FILES.researchData)
+  ]);
+
+  renderActorItems('studentData', students);
+  renderActorItems('teacherData', teachers);
+  renderActorItems('researchData', researchers);
+}
+
 
 // UI BINDINGS
 const usernameInput = document.getElementById('username');
@@ -416,11 +746,11 @@ loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   loginError.classList.add('hidden');
   try {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(apiUrl('/api/auth/login'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: usernameInput.value.trim(), password: passwordInput.value.trim() })
     });
-    const py = await res.json();
+    const py = await parseJsonResponse(res);
     if (!res.ok) throw new Error(py.message || 'Error de login');
 
     state.token = py.token; state.user = py.user;
@@ -471,6 +801,13 @@ if (cityFilterSelect) {
   });
 }
 
+if (mapIndicatorFilter) {
+  mapIndicatorFilter.addEventListener('change', (e) => {
+    state.activeIndicatorFilter = e.target.value;
+    refreshMapView();
+  });
+}
+
 if (clearCityBtn) {
   clearCityBtn.addEventListener('click', () => {
     state.activeCityFilter = 'ALL';
@@ -483,6 +820,8 @@ if (fitAllBtn) {
   fitAllBtn.addEventListener('click', () => {
     state.activeRegionFilter = 'ALL';
     state.activeCityFilter = 'ALL';
+    state.activeIndicatorFilter = 'ALL';
+    if (mapIndicatorFilter) mapIndicatorFilter.value = 'ALL';
     refreshMapView();
   });
 }
@@ -490,6 +829,69 @@ if (fitAllBtn) {
 if (openGlobalMapBtn) {
   openGlobalMapBtn.addEventListener('click', () => {
     document.querySelector('[data-section="mapa"]')?.click();
+  });
+}
+
+if (mapDatasetSelect) {
+  mapDatasetSelect.addEventListener('change', (event) => {
+    applyMapDataset(event.target.value);
+  });
+}
+
+if (loadDatasetToTextareaBtn) {
+  loadDatasetToTextareaBtn.addEventListener('click', async () => {
+    const targetPath = ingestionDatasetSelect?.value;
+    const uploadMsg = document.getElementById('uploadMsg');
+    if (!targetPath) return;
+    try {
+      const payload = await fetchPublicJson(targetPath);
+      const records = extractRecordsFromPayload(payload);
+      const uploadJson = document.getElementById('uploadJson');
+      if (uploadJson) {
+        uploadJson.value = JSON.stringify(records, null, 2);
+      }
+      if (uploadMsg) {
+        uploadMsg.className = 'text-sm mt-5 font-bold text-center p-3 rounded-xl block bg-indigo-50 text-indigo-700';
+        uploadMsg.textContent = `Dataset cargado al editor: ${records.length} registros.`;
+      }
+    } catch (error) {
+      if (uploadMsg) {
+        uploadMsg.className = 'text-sm mt-5 font-bold text-center p-3 rounded-xl block bg-rose-50 text-rose-700';
+        uploadMsg.textContent = error.message;
+      }
+    }
+  });
+}
+
+if (uploadSelectedDatasetBtn) {
+  uploadSelectedDatasetBtn.addEventListener('click', async () => {
+    const targetPath = ingestionDatasetSelect?.value;
+    const uploadMsg = document.getElementById('uploadMsg');
+    if (!targetPath || !uploadMsg) return;
+
+    uploadMsg.className = 'text-sm mt-5 font-bold text-center p-3 rounded-xl block bg-slate-50 text-slate-600';
+    uploadMsg.textContent = 'Cargando dataset seleccionado...';
+
+    try {
+      const payload = await fetchPublicJson(targetPath);
+      const records = extractRecordsFromPayload(payload);
+      if (!records.length) throw new Error('El dataset seleccionado no contiene records válidos.');
+
+      const response = await fetch(apiUrl('/api/data/upload'), {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records })
+      });
+      const body = await parseJsonResponse(response).catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || 'Error subiendo dataset.');
+
+      uploadMsg.className = 'text-sm mt-5 font-bold text-center p-3 rounded-xl block bg-emerald-50 text-emerald-700';
+      uploadMsg.textContent = `Dataset subido correctamente. Insertados: ${body.inserted || records.length}`;
+      await loadAppData();
+    } catch (error) {
+      uploadMsg.className = 'text-sm mt-5 font-bold text-center p-3 rounded-xl block bg-rose-50 text-rose-700';
+      uploadMsg.textContent = error.message;
+    }
   });
 }
 
@@ -506,9 +908,9 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     let res;
     if (file) {
       const fd = new FormData(); fd.append('file', file);
-      res = await fetch('/api/data/upload', { method: 'POST', headers: authHeaders(), body: fd });
+      res = await fetch(apiUrl('/api/data/upload'), { method: 'POST', headers: authHeaders(), body: fd });
     } else if (json) {
-      res = await fetch('/api/data/upload', {
+      res = await fetch(apiUrl('/api/data/upload'), {
         method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ records: JSON.parse(json) })
       });
@@ -516,7 +918,7 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
       throw new Error('Sin input');
     }
     if (!res.ok) throw new Error('Error al inyectar datos.');
-    const py = await res.json();
+    const py = await parseJsonResponse(res);
     m.className = 'text-xs font-bold text-emerald-600 block bg-emerald-50';
     m.textContent = `ÉXITO. ${py.inserted} rows insertadas centralmente.`;
     await loadAppData();
@@ -528,8 +930,19 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
 
 // App Bootstrap logic
 async function loadAppData() {
-  const [db, mapData] = await Promise.all([apiGet('/api/dashboard'), apiGet('/api/map/points')]);
+  const [db, mapData, recentProjects] = await Promise.all([
+    apiGet('/api/dashboard'),
+    apiGet('/api/map/points'),
+    apiGet('/api/projects/recent').catch(() => ({ projects: [] }))
+  ]);
   renderDashboard(db);
-  state.mapPoints = mapData.points || [];
-  refreshMapView();
+  renderRecentProjects(recentProjects.projects || []);
+  state.platformMapPoints = mapData.points || [];
+
+  await Promise.allSettled([
+    loadCoreProjectsData(),
+    loadEducationalActorsData()
+  ]);
+
+  applyMapDataset(state.currentMapDataset);
 }

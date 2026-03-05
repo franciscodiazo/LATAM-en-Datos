@@ -1,0 +1,134 @@
+{
+  "projectId": "core-food",
+  "title": "Core FOOD — Seguridad alimentaria y resiliencia nutricional",
+  "summary": "Evidencia territorial escolar para monitorear acceso, diversidad y resiliencia alimentaria.",
+  "focusOds": ["ODS 12", "ODS 13"],
+  "records": [
+    {
+      "indicator": "Diversidad dietética básica diaria",
+      "meta": "12.2",
+      "ods": "ODS 12",
+      "tipoDato": "Cuantitativo",
+      "instrumento": "Encuesta estudiantil",
+      "valorEjemplo": 3.8,
+      "unidad": "grupos alimenticios por día",
+      "territorio": "Ginebra, Valle del Cauca"
+    },
+    {
+      "indicator": "Número de comidas completas al día",
+      "meta": "12.3",
+      "ods": "ODS 12",
+      "tipoDato": "Cuantitativo",
+      "instrumento": "Encuesta",
+      "valorEjemplo": 2.4,
+      "unidad": "comidas/día",
+      "territorio": "Ginebra, Valle del Cauca"
+    },
+    {
+      "indicator": "Dificultad frecuente de acceso a alimentos",
+      "meta": "12.3",
+      "ods": "ODS 12",
+      "tipoDato": "Cuantitativo / percepción",
+      "instrumento": "Encuesta",
+      "valorEjemplo": 27,
+      "unidad": "% estudiantes",
+      "territorio": "Ciudad de Guatemala"
+    },
+    {
+      "indicator": "Diversidad de fuentes locales de alimentos",
+      "meta": "12.2",
+      "ods": "ODS 12",
+      "tipoDato": "Mixto",
+      "instrumento": "Mapeo comunitario + encuesta",
+      "valorEjemplo": 5,
+      "unidad": "fuentes activas",
+      "territorio": "Bariloche"
+    },
+    {
+      "indicator": "Acceso continuo a alimentos en crisis",
+      "meta": "12.3",
+      "ods": "ODS 12 / 13",
+      "tipoDato": "Perceptual",
+      "instrumento": "Encuesta",
+      "valorEjemplo": 61,
+      "unidad": "% hogares con acceso estable",
+      "territorio": "Ginebra, Valle del Cauca"
+    },
+    {
+      "indicator": "Percepción comunitaria de seguridad alimentaria",
+      "meta": "12.8",
+      "ods": "ODS 12",
+      "tipoDato": "Cualitativo",
+      "instrumento": "Encuesta",
+      "valorEjemplo": "Media",
+      "unidad": "escala cualitativa",
+      "territorio": "Ginebra, Valle del Cauca"
+    }
+  ],
+  "mapPoints": [
+    {
+      "title": "Diversidad dietética escolar",
+      "description": "Seguimiento de grupos alimenticios consumidos por estudiantes.",
+      "siteType": "Institución Educativa",
+      "category": "FOOD",
+      "maslowLevel": "Fisiológicas",
+      "zipCode": "763510",
+      "odsGoal": "ODS 12",
+      "smithsonianGuide": "Alimentación",
+      "audience": ["ESTUDIANTE", "DOCENTE", "INVESTIGADOR"],
+      "color": "#16A34A",
+      "lat": 3.7289,
+      "lng": -76.2647,
+      "projectName": "Core FOOD",
+      "cityName": "Ginebra"
+    },
+    {
+      "title": "Comidas completas por jornada",
+      "description": "Promedio de comidas completas por estudiante.",
+      "siteType": "Comedor comunitario",
+      "category": "FOOD",
+      "maslowLevel": "Fisiológicas",
+      "zipCode": "110111",
+      "odsGoal": "ODS 12",
+      "smithsonianGuide": "Alimentación",
+      "audience": ["DOCENTE", "INVESTIGADOR"],
+      "color": "#65A30D",
+      "lat": 4.7107,
+      "lng": -74.0717,
+      "projectName": "Core FOOD",
+      "cityName": "Bogotá"
+    },
+    {
+      "title": "Fuentes locales de alimentos",
+      "description": "Mapeo de mercados, huertas y ferias activas.",
+      "siteType": "Mercado",
+      "category": "FOOD",
+      "maslowLevel": "Fisiológicas",
+      "zipCode": "8400",
+      "odsGoal": "ODS 12",
+      "smithsonianGuide": "Alimentación",
+      "audience": ["ESTUDIANTE", "DOCENTE"],
+      "color": "#84CC16",
+      "lat": -41.1332,
+      "lng": -71.3103,
+      "projectName": "Core FOOD",
+      "cityName": "Bariloche"
+    },
+    {
+      "title": "Percepción de seguridad alimentaria",
+      "description": "Encuesta de percepción comunitaria sobre acceso estable a alimentos.",
+      "siteType": "Centro Comunitario",
+      "category": "FOOD",
+      "maslowLevel": "Seguridad",
+      "zipCode": "01001",
+      "odsGoal": "ODS 12",
+      "smithsonianGuide": "Alimentación",
+      "audience": ["DOCENTE_EMBAJADOR_NESST", "INVESTIGADOR"],
+      "color": "#22C55E",
+      "lat": 14.6349,
+      "lng": -90.5069,
+      "projectName": "Core FOOD",
+      "cityName": "Cdad de Guatemala"
+    }
+  ]
+}

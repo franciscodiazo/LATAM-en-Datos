@@ -1,0 +1,43 @@
+{
+  "description": "Ejemplo de cómo quedan almacenados los registros después de cargarlos en la plataforma.",
+  "records": [
+    {
+      "id": "d7acdb8f-cde7-4cf0-9b7d-a7f089af1c11",
+      "title": "Acceso a comedores escolares",
+      "description": "Cobertura de alimentación en zonas vulnerables",
+      "siteType": "Institución Educativa",
+      "category": "MASLOW",
+      "maslowLevel": "Fisiológicas",
+      "zipCode": "110111",
+      "odsGoal": "ODS 2",
+      "smithsonianGuide": "Alimentación",
+      "audience": ["ESTUDIANTE", "DOCENTE", "INVESTIGADOR"],
+      "color": "#16A34A",
+      "lat": 4.711,
+      "lng": -74.0721,
+      "projectName": "Nutrición Escolar Bogotá",
+      "sourceFormat": "JSON",
+      "createdBy": "admin",
+      "createdAt": "2026-02-28T17:20:00.000Z"
+    },
+    {
+      "id": "ec72f58e-b2f0-416f-860e-8c0a1dcf42f8",
+      "title": "Punto crítico de inundación escolar",
+      "description": "Afectación de acceso a clases por lluvias intensas",
+      "siteType": "Zona de riesgo",
+      "category": "AMBIENTE",
+      "maslowLevel": "Seguridad",
+      "zipCode": "050021",
+      "odsGoal": "ODS 13",
+      "smithsonianGuide": "Resiliencia",
+      "audience": ["DOCENTE", "INVESTIGADOR"],
+      "color": "#0EA5E9",
+      "lat": 6.2442,
+      "lng": -75.5812,
+      "projectName": "Riesgo climático escolar Medellín",
+      "sourceFormat": "JSON",
+      "createdBy": "agente",
+      "createdAt": "2026-02-28T17:21:30.000Z"
+    }
+  ]
+}

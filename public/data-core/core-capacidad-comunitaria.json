@@ -1,0 +1,124 @@
+{
+  "projectId": "core-capacidad-comunitaria",
+  "title": "Core ADAPT — Prácticas comunitarias y capacidad adaptativa",
+  "summary": "Monitoreo de agua, residuos, participación y preparación comunitaria ante crisis.",
+  "focusOds": ["ODS 6", "ODS 12", "ODS 13", "ODS 15"],
+  "records": [
+    {
+      "indicator": "Acceso regular a agua potable (hogar / escuela)",
+      "meta": "6.4 / 6.b",
+      "ods": "ODS 6",
+      "tipoDato": "Cuantitativo",
+      "instrumento": "Encuesta",
+      "valorEjemplo": 78,
+      "unidad": "% cobertura regular",
+      "territorio": "Ginebra, Valle del Cauca"
+    },
+    {
+      "indicator": "Separación básica de residuos en hogares",
+      "meta": "12.2",
+      "ods": "ODS 12",
+      "tipoDato": "Cuantitativo",
+      "instrumento": "Encuesta",
+      "valorEjemplo": 52,
+      "unidad": "% hogares",
+      "territorio": "Ginebra, Valle del Cauca"
+    },
+    {
+      "indicator": "Participación comunitaria ambiental",
+      "meta": "15.9 / 6.b",
+      "ods": "ODS 15 / 6",
+      "tipoDato": "Cualitativo",
+      "instrumento": "Encuesta",
+      "valorEjemplo": "Media-Alta",
+      "unidad": "escala cualitativa",
+      "territorio": "Ciudad de Guatemala"
+    },
+    {
+      "indicator": "Preparación percibida ante crisis",
+      "meta": "13.3",
+      "ods": "ODS 13",
+      "tipoDato": "Perceptual",
+      "instrumento": "Encuesta",
+      "valorEjemplo": 63,
+      "unidad": "% percepción favorable",
+      "territorio": "Bariloche"
+    },
+    {
+      "indicator": "Acceso a información confiable nutrición/ambiente",
+      "meta": "12.8 / 13.3",
+      "ods": "ODS 12 / 13",
+      "tipoDato": "Cualitativo",
+      "instrumento": "Encuesta",
+      "valorEjemplo": 58,
+      "unidad": "% acceso reportado",
+      "territorio": "Ginebra, Valle del Cauca"
+    }
+  ],
+  "mapPoints": [
+    {
+      "title": "Acceso regular a agua potable escolar",
+      "description": "Cobertura de agua potable en institución educativa y hogares cercanos.",
+      "siteType": "Institución Educativa",
+      "category": "CAPACIDAD",
+      "maslowLevel": "Fisiológicas",
+      "zipCode": "763510",
+      "odsGoal": "ODS 6",
+      "smithsonianGuide": "Comunidades sostenibles",
+      "audience": ["ESTUDIANTE", "DOCENTE", "INVESTIGADOR"],
+      "color": "#0284C7",
+      "lat": 3.7275,
+      "lng": -76.2658,
+      "projectName": "Core ADAPT",
+      "cityName": "Ginebra"
+    },
+    {
+      "title": "Separación de residuos en hogares",
+      "description": "Práctica reportada de separación básica por familias.",
+      "siteType": "Barrio",
+      "category": "CAPACIDAD",
+      "maslowLevel": "Seguridad",
+      "zipCode": "760001",
+      "odsGoal": "ODS 12",
+      "smithsonianGuide": "Comunidades sostenibles",
+      "audience": ["DOCENTE", "INVESTIGADOR"],
+      "color": "#7C3AED",
+      "lat": 3.4516,
+      "lng": -76.532,
+      "projectName": "Core ADAPT",
+      "cityName": "Cali"
+    },
+    {
+      "title": "Participación comunitaria ambiental",
+      "description": "Red local de participación en acciones de restauración y cuidado.",
+      "siteType": "Centro Comunitario",
+      "category": "CAPACIDAD",
+      "maslowLevel": "Afiliación",
+      "zipCode": "01001",
+      "odsGoal": "ODS 15 / 6",
+      "smithsonianGuide": "Comunidades sostenibles",
+      "audience": ["DOCENTE_EMBAJADOR_NESST", "DOCENTE", "INVESTIGADOR"],
+      "color": "#A855F7",
+      "lat": 14.6391,
+      "lng": -90.5115,
+      "projectName": "Core ADAPT",
+      "cityName": "Cdad de Guatemala"
+    },
+    {
+      "title": "Preparación percibida ante crisis",
+      "description": "Percepción de preparación comunitaria para crisis climática/alimentaria.",
+      "siteType": "Zona escolar",
+      "category": "CAPACIDAD",
+      "maslowLevel": "Seguridad",
+      "zipCode": "8400",
+      "odsGoal": "ODS 13",
+      "smithsonianGuide": "Resiliencia",
+      "audience": ["DOCENTE", "INVESTIGADOR"],
+      "color": "#6366F1",
+      "lat": -41.1341,
+      "lng": -71.3083,
+      "projectName": "Core ADAPT",
+      "cityName": "Bariloche"
+    }
+  ]
+}

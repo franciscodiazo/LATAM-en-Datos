@@ -1,0 +1,27 @@
+{
+  "actor": "DOCENTE",
+  "title": "Docentes",
+  "items": [
+    {
+      "tema": "Monitoreo nutricional escolar",
+      "accion": "Aplicación y validación de encuestas alimentarias",
+      "indicador": "Número de comidas completas al día",
+      "ods": "ODS 12.3",
+      "instrumento": "Encuesta"
+    },
+    {
+      "tema": "Capacidad adaptativa",
+      "accion": "Evaluación de preparación ante crisis climáticas",
+      "indicador": "Preparación percibida ante crisis",
+      "ods": "ODS 13.3",
+      "instrumento": "Encuesta perceptual"
+    },
+    {
+      "tema": "Formación ambiental",
+      "accion": "Diseño de secuencias didácticas con datos territoriales",
+      "indicador": "Acceso a información confiable nutrición/ambiente",
+      "ods": "ODS 12.8 / 13.3",
+      "instrumento": "Bitácora pedagógica"
+    }
+  ]
+}

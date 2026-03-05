@@ -1,0 +1,35 @@
+{
+  "project": "LATAM EN DATOS",
+  "justificacion": {
+    "odsAlineados": ["ODS 6", "ODS 12", "ODS 13", "ODS 15"],
+    "metasPriorizadas": ["6.4", "6.b", "12.2", "12.3", "12.8", "13.3", "15.1", "15.5", "15.9"],
+    "enfoque": "Escuelas como nodos de producción de evidencia territorial primaria"
+  },
+  "matrizIndicadores": {
+    "bloqueA_food": [
+      { "indicador": "Diversidad dietética básica diaria", "ods": "12", "meta": "12.2", "tipoDato": "Cuantitativo", "instrumento": "Encuesta estudiantil" },
+      { "indicador": "Número de comidas completas al día", "ods": "12", "meta": "12.3", "tipoDato": "Cuantitativo", "instrumento": "Encuesta" },
+      { "indicador": "Dificultad frecuente de acceso a alimentos", "ods": "12", "meta": "12.3", "tipoDato": "Cuantitativo / percepción", "instrumento": "Encuesta" },
+      { "indicador": "Diversidad de fuentes locales de alimentos", "ods": "12", "meta": "12.2", "tipoDato": "Mixto", "instrumento": "Mapeo comunitario + encuesta" },
+      { "indicador": "Prácticas tradicionales de conservación/preparación", "ods": "12", "meta": "12.2", "tipoDato": "Cualitativo", "instrumento": "Entrevista corta / cuestionario" },
+      { "indicador": "Acceso continuo a alimentos en crisis", "ods": "12/13", "meta": "12.3", "tipoDato": "Perceptual", "instrumento": "Encuesta" },
+      { "indicador": "Percepción comunitaria de seguridad alimentaria", "ods": "12", "meta": "12.8", "tipoDato": "Cualitativo", "instrumento": "Encuesta" },
+      { "indicador": "Brecha entre recomendaciones y consumo real", "ods": "12", "meta": "12.8", "tipoDato": "Comparativo", "instrumento": "Encuesta + referencia nutricional" },
+      { "indicador": "Influencia cultural en decisiones alimentarias", "ods": "12", "meta": "12.8", "tipoDato": "Cualitativo", "instrumento": "Entrevista / encuesta abierta" }
+    ],
+    "bloqueB_resiliencia": [
+      { "indicador": "Frecuencia de eventos ambientales", "ods": "13/15", "meta": "13.3/15.5", "tipoDato": "Registro histórico", "instrumento": "Línea de tiempo comunitaria" },
+      { "indicador": "Cambios observables en ecosistema local", "ods": "15", "meta": "15.1/15.5", "tipoDato": "Observacional", "instrumento": "Ficha de campo + fotografías" },
+      { "indicador": "Percepción de riesgo ambiental", "ods": "13/15", "meta": "13.3/15.9", "tipoDato": "Cualitativo", "instrumento": "Encuesta" },
+      { "indicador": "Estrategias locales de adaptación", "ods": "13/15", "meta": "13.3/15.9", "tipoDato": "Observacional", "instrumento": "Lista de verificación" },
+      { "indicador": "Puntos críticos ambientales mapeados", "ods": "15", "meta": "15.9", "tipoDato": "Espacial", "instrumento": "Mapa colaborativo" }
+    ],
+    "bloqueC_capacidad": [
+      { "indicador": "Acceso regular a agua potable (hogar/escuela)", "ods": "6", "meta": "6.4/6.b", "tipoDato": "Cuantitativo", "instrumento": "Encuesta" },
+      { "indicador": "Separación básica de residuos en hogares", "ods": "12", "meta": "12.2", "tipoDato": "Cuantitativo", "instrumento": "Encuesta" },
+      { "indicador": "Participación comunitaria ambiental", "ods": "15/6", "meta": "15.9/6.b", "tipoDato": "Cualitativo", "instrumento": "Encuesta" },
+      { "indicador": "Preparación percibida ante crisis", "ods": "13", "meta": "13.3", "tipoDato": "Perceptual", "instrumento": "Encuesta" },
+      { "indicador": "Acceso a información confiable nutrición/ambiente", "ods": "12/13", "meta": "12.8/13.3", "tipoDato": "Cualitativo", "instrumento": "Encuesta" }
+    ]
+  }
+}

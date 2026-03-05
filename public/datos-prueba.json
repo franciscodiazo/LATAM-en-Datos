@@ -80,43 +80,43 @@
         "description": "Sede de seguridad metropolitana."
     },
     {
-        "title": "Centro Cívico Bariloche",
+        "title": "Centro Cívico Posadas",
         "category": "MASLOW",
         "maslowLevel": "Afiliación",
-        "lat": -41.133,
-        "lng": -71.310,
+        "lat": -27.366,
+        "lng": -55.900,
         "color": "#f59e0b",
-        "cityName": "Bariloche",
-        "description": "Turismo y cultura local."
+        "cityName": "Posadas",
+        "description": "Centro comunitario y cultural urbano."
     },
     {
         "title": "Hospital Zonal",
         "category": "MASLOW",
         "maslowLevel": "Seguridad",
-        "lat": -41.136,
-        "lng": -71.306,
+        "lat": -27.374,
+        "lng": -55.894,
         "color": "#ec4899",
-        "cityName": "Bariloche",
+        "cityName": "Posadas",
         "description": "Salud local."
     },
     {
-        "title": "Cerro Catedral",
+        "title": "Costanera de Posadas",
         "category": "MASLOW",
         "maslowLevel": "Reconocimiento",
-        "lat": -41.171,
-        "lng": -71.439,
+        "lat": -27.360,
+        "lng": -55.889,
         "color": "#0ea5e9",
-        "cityName": "Bariloche",
-        "description": "Centro turístico de élite y reconocimiento deportivo."
+        "cityName": "Posadas",
+        "description": "Nodo turístico y de integración regional."
     },
     {
-        "title": "Instituto Balseiro",
+        "title": "Parque del Conocimiento",
         "category": "MASLOW",
         "maslowLevel": "Autorrealización",
-        "lat": -41.119,
-        "lng": -71.417,
+        "lat": -27.397,
+        "lng": -55.902,
         "color": "#10b981",
-        "cityName": "Bariloche",
-        "description": "Polo científico en Argentina."
+        "cityName": "Posadas",
+        "description": "Polo educativo y científico en Misiones."
     }
 ]

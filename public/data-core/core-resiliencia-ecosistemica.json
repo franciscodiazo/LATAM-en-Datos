@@ -1,0 +1,124 @@
+{
+  "projectId": "core-resiliencia-ecosistemica",
+  "title": "Core ECO — Resiliencia ecosistémica y ambiental",
+  "summary": "Seguimiento de riesgo ambiental, adaptación local y conservación de ecosistemas.",
+  "focusOds": ["ODS 13", "ODS 15"],
+  "records": [
+    {
+      "indicator": "Frecuencia de eventos ambientales locales",
+      "meta": "13.3 / 15.5",
+      "ods": "ODS 13 / 15",
+      "tipoDato": "Registro histórico",
+      "instrumento": "Línea de tiempo comunitaria",
+      "valorEjemplo": 7,
+      "unidad": "eventos/año",
+      "territorio": "Medellín"
+    },
+    {
+      "indicator": "Cambios observables en ecosistema local",
+      "meta": "15.1 / 15.5",
+      "ods": "ODS 15",
+      "tipoDato": "Observacional",
+      "instrumento": "Ficha de campo + fotografías",
+      "valorEjemplo": 12,
+      "unidad": "hallazgos validados",
+      "territorio": "Ginebra, Valle del Cauca"
+    },
+    {
+      "indicator": "Percepción de riesgo ambiental",
+      "meta": "13.3 / 15.9",
+      "ods": "ODS 13 / 15",
+      "tipoDato": "Cualitativo",
+      "instrumento": "Encuesta",
+      "valorEjemplo": "Alta",
+      "unidad": "escala cualitativa",
+      "territorio": "Ciudad de Guatemala"
+    },
+    {
+      "indicator": "Estrategias locales de adaptación",
+      "meta": "13.3 / 15.9",
+      "ods": "ODS 13 / 15",
+      "tipoDato": "Observacional",
+      "instrumento": "Lista de verificación",
+      "valorEjemplo": 9,
+      "unidad": "estrategias activas",
+      "territorio": "Posadas, Misiones"
+    },
+    {
+      "indicator": "Puntos críticos ambientales mapeados",
+      "meta": "15.9",
+      "ods": "ODS 15",
+      "tipoDato": "Espacial",
+      "instrumento": "Mapa colaborativo",
+      "valorEjemplo": 14,
+      "unidad": "puntos georreferenciados",
+      "territorio": "Ginebra, Valle del Cauca"
+    }
+  ],
+  "mapPoints": [
+    {
+      "title": "Zona de inundación recurrente",
+      "description": "Registro histórico de anegamientos cerca de sedes escolares.",
+      "siteType": "Zona de riesgo",
+      "category": "AMBIENTE",
+      "maslowLevel": "Seguridad",
+      "zipCode": "050021",
+      "odsGoal": "ODS 13",
+      "smithsonianGuide": "Resiliencia",
+      "audience": ["DOCENTE", "INVESTIGADOR"],
+      "color": "#0EA5E9",
+      "lat": 6.2518,
+      "lng": -75.5636,
+      "projectName": "Core ECO",
+      "cityName": "Medellín"
+    },
+    {
+      "title": "Corredor ecológico escolar",
+      "description": "Cambios observables en biodiversidad local y cobertura vegetal.",
+      "siteType": "Ecosistema urbano",
+      "category": "SMITHSONIAN",
+      "maslowLevel": "Afiliación",
+      "zipCode": "763510",
+      "odsGoal": "ODS 15",
+      "smithsonianGuide": "Comunidades sostenibles",
+      "audience": ["ESTUDIANTE", "DOCENTE", "INVESTIGADOR"],
+      "color": "#16A34A",
+      "lat": 3.7304,
+      "lng": -76.2632,
+      "projectName": "Core ECO",
+      "cityName": "Ginebra"
+    },
+    {
+      "title": "Punto crítico de residuos",
+      "description": "Sitio de acumulación de residuos identificado por mapeo colaborativo.",
+      "siteType": "Punto crítico",
+      "category": "AMBIENTE",
+      "maslowLevel": "Seguridad",
+      "zipCode": "01001",
+      "odsGoal": "ODS 15",
+      "smithsonianGuide": "Resiliencia",
+      "audience": ["DOCENTE_EMBAJADOR_NESST", "INVESTIGADOR"],
+      "color": "#F97316",
+      "lat": 14.641,
+      "lng": -90.5133,
+      "projectName": "Core ECO",
+      "cityName": "Cdad de Guatemala"
+    },
+    {
+      "title": "Estrategia local de adaptación hídrica",
+      "description": "Manejo comunitario del agua y drenaje en contexto de montaña.",
+      "siteType": "Infraestructura verde",
+      "category": "SMITHSONIAN",
+      "maslowLevel": "Seguridad",
+      "zipCode": "8400",
+      "odsGoal": "ODS 13",
+      "smithsonianGuide": "Resiliencia",
+      "audience": ["DOCENTE", "INVESTIGADOR"],
+      "color": "#38BDF8",
+      "lat": -41.1363,
+      "lng": -71.3048,
+      "projectName": "Core ECO",
+      "cityName": "Bariloche"
+    }
+  ]
+}

@@ -41,6 +41,9 @@ const API_CONSUMER_ROLES = [
   Roles.DOCENTE_EMBAJADOR_NESST
 ];
 
+const INDICATOR_CODES = ['WATER', 'WASTE', 'CONNECTIVITY', 'INFRASTRUCTURE', 'OTHER'];
+const EVIDENCE_LEVELS = ['OBSERVACION', 'ENCUESTA', 'FUENTE_OFICIAL', 'MIXTA', 'NO_DEFINIDA'];
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -62,6 +65,18 @@ const seedRecords = [
     smithsonianGuide: 'Alimentación',
     audience: ['ESTUDIANTE', 'DOCENTE', 'INVESTIGADOR'],
     color: '#16A34A',
+    country: 'Colombia',
+    region: 'Bogotá D.C.',
+    city: 'Bogotá',
+    community: 'Localidad Centro',
+    schoolName: 'Colegio Distrital',
+    indicatorCode: 'WATER',
+    measurementDate: new Date().toISOString().slice(0, 10),
+    evidenceLevel: 'ENCUESTA',
+    sourceInstrument: 'Encuesta escolar',
+    grade: '10',
+    teamName: 'Semillero Agua',
+    teacherName: 'Docente de Ciencias',
     lat: 4.711,
     lng: -74.0721,
     projectName: 'Nutrición Escolar Bogotá',
@@ -81,6 +96,18 @@ const seedRecords = [
     smithsonianGuide: 'Comunidades sostenibles',
     audience: ['DOCENTE_EMBAJADOR_NESST', 'INVESTIGADOR'],
     color: '#9333EA',
+    country: 'Colombia',
+    region: 'Antioquia',
+    city: 'Medellín',
+    community: 'Comuna 10',
+    schoolName: 'Institución Educativa Centro',
+    indicatorCode: 'WASTE',
+    measurementDate: new Date().toISOString().slice(0, 10),
+    evidenceLevel: 'OBSERVACION',
+    sourceInstrument: 'Ficha de campo',
+    grade: '9',
+    teamName: 'Semillero Eco',
+    teacherName: 'Docente líder',
     lat: 6.2442,
     lng: -75.5812,
     projectName: 'Barrios Resilientes Medellín',
@@ -328,6 +355,18 @@ class MySqlStore {
         title VARCHAR(200) NOT NULL,
         description TEXT,
         site_type VARCHAR(150),
+        country VARCHAR(80),
+        region VARCHAR(120),
+        city VARCHAR(120),
+        community VARCHAR(150),
+        school_name VARCHAR(180),
+        indicator_code VARCHAR(40),
+        measurement_date DATE,
+        evidence_level VARCHAR(40),
+        source_instrument VARCHAR(180),
+        grade VARCHAR(40),
+        team_name VARCHAR(120),
+        teacher_name VARCHAR(160),
         category VARCHAR(80) NOT NULL,
         maslow_level VARCHAR(120) NOT NULL,
         zip_code VARCHAR(20),
@@ -349,6 +388,42 @@ class MySqlStore {
     } catch {}
     try {
       await this.pool.execute('ALTER TABLE records ADD COLUMN zip_code VARCHAR(20) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN country VARCHAR(80) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN region VARCHAR(120) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN city VARCHAR(120) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN community VARCHAR(150) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN school_name VARCHAR(180) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN indicator_code VARCHAR(40) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN measurement_date DATE NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN evidence_level VARCHAR(40) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN source_instrument VARCHAR(180) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN grade VARCHAR(40) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN team_name VARCHAR(120) NULL');
+    } catch {}
+    try {
+      await this.pool.execute('ALTER TABLE records ADD COLUMN teacher_name VARCHAR(160) NULL');
     } catch {}
 
     await this.pool.execute(`
@@ -469,6 +544,18 @@ class MySqlStore {
       title: row.title,
       description: row.description || '',
       siteType: row.siteType || '',
+      country: row.country || '',
+      region: row.region || '',
+      city: row.city || '',
+      community: row.community || '',
+      schoolName: row.schoolName || '',
+      indicatorCode: row.indicatorCode || 'OTHER',
+      measurementDate: row.measurementDate || '',
+      evidenceLevel: row.evidenceLevel || 'NO_DEFINIDA',
+      sourceInstrument: row.sourceInstrument || '',
+      grade: row.grade || '',
+      teamName: row.teamName || '',
+      teacherName: row.teacherName || '',
       category: row.category,
       maslowLevel: row.maslowLevel,
       zipCode: row.zipCode || '',
@@ -487,7 +574,10 @@ class MySqlStore {
 
   async getRecords() {
     const [rows] = await this.pool.query(
-      `SELECT id, title, description, site_type AS siteType, category, maslow_level AS maslowLevel, zip_code AS zipCode, ods_goal AS odsGoal,
+          `SELECT id, title, description, site_type AS siteType, country, region, city, community, school_name AS schoolName,
+            indicator_code AS indicatorCode, measurement_date AS measurementDate, evidence_level AS evidenceLevel,
+            source_instrument AS sourceInstrument, grade, team_name AS teamName, teacher_name AS teacherName,
+            category, maslow_level AS maslowLevel, zip_code AS zipCode, ods_goal AS odsGoal,
               smithsonian_guide AS smithsonianGuide, audience, color, lat, lng, project_name AS projectName,
               source_format AS sourceFormat, created_by AS createdBy, created_at AS createdAt
        FROM records ORDER BY created_at DESC`
@@ -499,14 +589,28 @@ class MySqlStore {
     for (const record of records) {
       await this.pool.execute(
         `INSERT INTO records (
-          id, title, description, site_type, category, maslow_level, zip_code, ods_goal, smithsonian_guide,
+          id, title, description, site_type, country, region, city, community, school_name,
+          indicator_code, measurement_date, evidence_level, source_instrument, grade, team_name, teacher_name,
+          category, maslow_level, zip_code, ods_goal, smithsonian_guide,
           audience, color, lat, lng, project_name, source_format, created_by, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
         [
           record.id,
           record.title,
           record.description,
           record.siteType,
+          record.country,
+          record.region,
+          record.city,
+          record.community,
+          record.schoolName,
+          record.indicatorCode,
+          record.measurementDate || null,
+          record.evidenceLevel,
+          record.sourceInstrument,
+          record.grade,
+          record.teamName,
+          record.teacherName,
           record.category,
           record.maslowLevel,
           record.zipCode,
@@ -592,9 +696,162 @@ function parseCsv(buffer) {
     });
 }
 
+function inferIndicatorCode(input = {}) {
+  const provided = String(input.indicatorCode || '').trim().toUpperCase();
+  if (INDICATOR_CODES.includes(provided)) {
+    return provided;
+  }
+  const text = `${input.title || ''} ${input.description || ''} ${input.siteType || ''} ${input.category || ''}`.toLowerCase();
+  if (text.includes('agua') || text.includes('acueduct')) return 'WATER';
+  if (text.includes('residu') || text.includes('basura') || text.includes('recicl')) return 'WASTE';
+  if (text.includes('conect') || text.includes('internet') || text.includes('digital')) return 'CONNECTIVITY';
+  if (text.includes('infraestructura') || text.includes('escuela') || text.includes('colegio') || text.includes('aula')) return 'INFRASTRUCTURE';
+  return 'OTHER';
+}
+
+function normalizeDateOnly(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function normalizeEvidenceLevel(value) {
+  const upper = String(value || '').trim().toUpperCase();
+  if (!upper) return 'NO_DEFINIDA';
+  return EVIDENCE_LEVELS.includes(upper) ? upper : '';
+}
+
+function validateNormalizedRecord(record) {
+  const errors = [];
+
+  if (!record.title || !String(record.title).trim()) {
+    errors.push('title es requerido.');
+  }
+  if (!INDICATOR_CODES.includes(record.indicatorCode)) {
+    errors.push(`indicatorCode inválido. Usa: ${INDICATOR_CODES.join(', ')}`);
+  }
+  if (record.evidenceLevel && !EVIDENCE_LEVELS.includes(record.evidenceLevel)) {
+    errors.push(`evidenceLevel inválido. Usa: ${EVIDENCE_LEVELS.join(', ')}`);
+  }
+  if (record.measurementDate && !normalizeDateOnly(record.measurementDate)) {
+    errors.push('measurementDate inválida. Usa formato YYYY-MM-DD o fecha ISO.');
+  }
+  if (!Number.isFinite(record.lat) || record.lat < -90 || record.lat > 90) {
+    errors.push('lat fuera de rango (-90 a 90).');
+  }
+  if (!Number.isFinite(record.lng) || record.lng < -180 || record.lng > 180) {
+    errors.push('lng fuera de rango (-180 a 180).');
+  }
+
+  return errors;
+}
+
+function filterRecordsByContext(records, context = {}) {
+  const { country, city, indicatorCode, fromDate, toDate } = context;
+  const from = normalizeDateOnly(fromDate);
+  const to = normalizeDateOnly(toDate);
+
+  return records.filter((record) => {
+    const countryOk = country ? String(record.country || '').toLowerCase() === String(country).toLowerCase() : true;
+    const cityOk = city ? String(record.city || '').toLowerCase() === String(city).toLowerCase() : true;
+    const indicatorOk = indicatorCode
+      ? String(record.indicatorCode || '').toUpperCase() === String(indicatorCode).toUpperCase()
+      : true;
+
+    const day = normalizeDateOnly(record.measurementDate || record.createdAt);
+    const fromOk = from && day ? day >= from : true;
+    const toOk = to && day ? day <= to : true;
+
+    return countryOk && cityOk && indicatorOk && fromOk && toOk;
+  });
+}
+
+function countBy(items, mapper) {
+  return items.reduce((acc, item) => {
+    const key = mapper(item) || 'NO_DEFINIDO';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function topEntries(counter, limit = 3) {
+  return Object.entries(counter)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([name, value]) => ({ name, value }));
+}
+
+function buildAssistantReply({ message, filteredRecords, totalRecords, context }) {
+  const byIndicator = countBy(filteredRecords, (record) => record.indicatorCode || 'OTHER');
+  const byCountry = countBy(filteredRecords, (record) => record.country || 'No definido');
+  const byCity = countBy(filteredRecords, (record) => record.city || 'No definida');
+  const byEvidence = countBy(filteredRecords, (record) => record.evidenceLevel || 'NO_DEFINIDA');
+
+  const topIndicators = topEntries(byIndicator, 3);
+  const topCountries = topEntries(byCountry, 3);
+  const topCities = topEntries(byCity, 3);
+
+  const scopeLabel = [
+    context.country ? `país: ${context.country}` : null,
+    context.city ? `ciudad: ${context.city}` : null,
+    context.indicatorCode ? `indicador: ${context.indicatorCode}` : null,
+    context.fromDate ? `desde: ${context.fromDate}` : null,
+    context.toDate ? `hasta: ${context.toDate}` : null
+  ]
+    .filter(Boolean)
+    .join(' | ');
+
+  const intro = filteredRecords.length
+    ? `Analicé ${filteredRecords.length} registros de un total de ${totalRecords}${scopeLabel ? ` (${scopeLabel})` : ''}.`
+    : `No hay registros para el contexto solicitado${scopeLabel ? ` (${scopeLabel})` : ''}.`;
+
+  const indicatorLine = topIndicators.length
+    ? `Indicadores más frecuentes: ${topIndicators.map((item) => `${item.name} (${item.value})`).join(', ')}.`
+    : 'No se identificaron indicadores con datos suficientes.';
+
+  const territoryLine = topCountries.length
+    ? `Mayor concentración territorial: ${topCountries.map((item) => `${item.name} (${item.value})`).join(', ')}.`
+    : 'No fue posible identificar concentración territorial.';
+
+  const insights = [];
+  if (topIndicators.length) insights.push(`Predomina ${topIndicators[0].name} con ${topIndicators[0].value} registros.`);
+  if (topCities.length) insights.push(`La ciudad con más evidencia es ${topCities[0].name} (${topCities[0].value}).`);
+  if (Object.keys(byEvidence).length) {
+    const evidenceTop = topEntries(byEvidence, 1)[0];
+    if (evidenceTop) insights.push(`El tipo de evidencia más reportado es ${evidenceTop.name} (${evidenceTop.value}).`);
+  }
+
+  const suggestions = [
+    'Comparar WATER, WASTE, CONNECTIVITY e INFRASTRUCTURE en el mismo periodo para identificar brechas.',
+    'Reforzar registros con evidenceLevel y measurementDate para mejorar trazabilidad científica.',
+    'Generar informe por país/ciudad con visualizaciones y conclusiones pedagógicas basadas en evidencia.'
+  ];
+
+  return {
+    reply: `${intro} ${indicatorLine} ${territoryLine} Consulta recibida: "${String(message).slice(0, 220)}".`,
+    insights,
+    suggestions,
+    dataSnapshot: {
+      totalRecords,
+      filteredRecords: filteredRecords.length,
+      byIndicator,
+      byCountry,
+      byCity,
+      byEvidence
+    },
+    disclaimer:
+      'Este asistente entrega análisis heurístico basado en los datos actuales de la plataforma. No sustituye validación metodológica docente.',
+    generatedAt: new Date().toISOString()
+  };
+}
+
 function normalizeRecord(input, user) {
   const lat = Number(input.lat ?? input.latitude ?? 0);
   const lng = Number(input.lng ?? input.lon ?? input.longitude ?? 0);
+  const indicatorCode = inferIndicatorCode(input);
+  const evidenceLevel = normalizeEvidenceLevel(input.evidenceLevel || input.evidence || 'NO_DEFINIDA') || 'NO_DEFINIDA';
+  const measurementDate = normalizeDateOnly(input.measurementDate || input.date || '');
   const audience = Array.isArray(input.audience)
     ? input.audience
     : String(input.audience || '')
@@ -607,6 +864,18 @@ function normalizeRecord(input, user) {
     title: input.title || 'Dato sin título',
     description: input.description || '',
     siteType: input.siteType || input.placeType || '',
+    country: input.country || input.pais || '',
+    region: input.region || input.departamento || '',
+    city: input.city || input.cityName || input.ciudad || '',
+    community: input.community || input.comunidad || '',
+    schoolName: input.schoolName || input.school || input.institucion || '',
+    indicatorCode,
+    measurementDate,
+    evidenceLevel,
+    sourceInstrument: input.sourceInstrument || input.instrument || '',
+    grade: String(input.grade || input.curso || ''),
+    teamName: input.teamName || input.team || '',
+    teacherName: input.teacherName || input.teacher || '',
     category: input.category || 'GENERAL',
     maslowLevel: input.maslowLevel || 'Sin clasificar',
     zipCode: input.zipCode || input.zip || '',
@@ -629,6 +898,18 @@ function toCsv(records) {
     'title',
     'description',
     'siteType',
+    'country',
+    'region',
+    'city',
+    'community',
+    'schoolName',
+    'indicatorCode',
+    'measurementDate',
+    'evidenceLevel',
+    'sourceInstrument',
+    'grade',
+    'teamName',
+    'teacherName',
     'category',
     'maslowLevel',
     'zipCode',
@@ -669,6 +950,18 @@ function toGeoJson(records) {
         properties: {
           id: record.id,
           title: record.title,
+          country: record.country,
+          region: record.region,
+          city: record.city,
+          community: record.community,
+          schoolName: record.schoolName,
+          indicatorCode: record.indicatorCode,
+          measurementDate: record.measurementDate,
+          evidenceLevel: record.evidenceLevel,
+          sourceInstrument: record.sourceInstrument,
+          grade: record.grade,
+          teamName: record.teamName,
+          teacherName: record.teacherName,
           siteType: record.siteType,
           category: record.category,
           maslowLevel: record.maslowLevel,
@@ -757,13 +1050,21 @@ app.get('/api/dashboard', authenticate, async (_, res) => {
 app.get('/api/data', authenticate, authorize(API_CONSUMER_ROLES), async (req, res) => {
   try {
     const records = await store.getRecords();
-    const { category, maslowLevel, audience } = req.query;
+    const { category, maslowLevel, audience, country, city, indicatorCode, fromDate, toDate } = req.query;
 
     const filtered = records.filter((record) => {
       const categoryOk = category ? record.category === category : true;
       const maslowOk = maslowLevel ? record.maslowLevel === maslowLevel : true;
       const audienceOk = audience ? (record.audience || []).includes(audience) : true;
-      return categoryOk && maslowOk && audienceOk;
+      const countryOk = country ? String(record.country || '').toLowerCase() === String(country).toLowerCase() : true;
+      const cityOk = city ? String(record.city || '').toLowerCase() === String(city).toLowerCase() : true;
+      const indicatorOk = indicatorCode ? String(record.indicatorCode || '').toUpperCase() === String(indicatorCode).toUpperCase() : true;
+
+      const day = normalizeDateOnly(record.measurementDate || record.createdAt);
+      const fromOk = fromDate && day ? day >= normalizeDateOnly(fromDate) : true;
+      const toOk = toDate && day ? day <= normalizeDateOnly(toDate) : true;
+
+      return categoryOk && maslowOk && audienceOk && countryOk && cityOk && indicatorOk && fromOk && toOk;
     });
 
     res.json({ count: filtered.length, data: filtered });
@@ -782,6 +1083,18 @@ app.get('/api/map/points', authenticate, async (_, res) => {
         title: record.title,
         description: record.description,
         siteType: record.siteType,
+        country: record.country,
+        region: record.region,
+        city: record.city,
+        community: record.community,
+        schoolName: record.schoolName,
+        indicatorCode: record.indicatorCode,
+        measurementDate: record.measurementDate,
+        evidenceLevel: record.evidenceLevel,
+        sourceInstrument: record.sourceInstrument,
+        grade: record.grade,
+        teamName: record.teamName,
+        teacherName: record.teacherName,
         category: record.category,
         maslowLevel: record.maslowLevel,
         zipCode: record.zipCode,
@@ -809,6 +1122,60 @@ app.get('/api/projects/recent', authenticate, async (_, res) => {
     res.json({ projects: recent });
   } catch (error) {
     res.status(500).json({ message: 'Error consultando proyectos.', detail: error.message });
+  }
+});
+
+app.post('/api/ai/chat', authenticate, authorize(ALL_ROLES), async (req, res) => {
+  try {
+    const { message, context = {} } = req.body || {};
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ message: 'message es requerido y debe ser texto.' });
+    }
+
+    const cleanMessage = message.trim();
+    if (cleanMessage.length < 3) {
+      return res.status(400).json({ message: 'message debe tener al menos 3 caracteres.' });
+    }
+    if (cleanMessage.length > 1500) {
+      return res.status(400).json({ message: 'message excede el límite de 1500 caracteres.' });
+    }
+
+    const requestedIndicator = context.indicatorCode ? String(context.indicatorCode).toUpperCase() : '';
+    if (requestedIndicator && !INDICATOR_CODES.includes(requestedIndicator)) {
+      return res.status(400).json({
+        message: `indicatorCode inválido. Usa: ${INDICATOR_CODES.join(', ')}`
+      });
+    }
+
+    const records = await store.getRecords();
+    const scopedRecords = filterRecordsByContext(records, {
+      country: context.country,
+      city: context.city,
+      indicatorCode: requestedIndicator || undefined,
+      fromDate: context.fromDate,
+      toDate: context.toDate
+    });
+
+    const analysis = buildAssistantReply({
+      message: cleanMessage,
+      filteredRecords: scopedRecords,
+      totalRecords: records.length,
+      context: {
+        country: context.country,
+        city: context.city,
+        indicatorCode: requestedIndicator,
+        fromDate: context.fromDate,
+        toDate: context.toDate
+      }
+    });
+
+    return res.json({
+      assistant: 'LATAM_EDU_AI',
+      model: 'heuristic-v1',
+      ...analysis
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error generando respuesta del asistente.', detail: error.message });
   }
 });
 
@@ -863,15 +1230,34 @@ app.post(
         return res.status(400).json({ message: 'Debes enviar un archivo o un arreglo records.' });
       }
 
-      const normalized = inputRecords.map((item) =>
-        normalizeRecord(
+      const normalized = [];
+      const rejected = [];
+
+      inputRecords.forEach((item, index) => {
+        const record = normalizeRecord(
           {
             ...item,
             sourceFormat: req.file ? path.extname(req.file.originalname).replace('.', '').toUpperCase() : 'JSON'
           },
           req.user
-        )
-      );
+        );
+
+        const errors = validateNormalizedRecord(record);
+        if (errors.length) {
+          rejected.push({ index, title: item?.title || 'Sin título', errors });
+          return;
+        }
+        normalized.push(record);
+      });
+
+      if (!normalized.length) {
+        return res.status(400).json({
+          message: 'Ningún registro válido para insertar.',
+          inserted: 0,
+          rejectedCount: rejected.length,
+          rejected
+        });
+      }
 
       await store.addRecords(normalized);
 
@@ -892,7 +1278,12 @@ app.post(
           }))
       );
 
-      return res.status(201).json({ message: 'Datos cargados correctamente.', inserted: normalized.length });
+      return res.status(201).json({
+        message: rejected.length ? 'Datos cargados con observaciones.' : 'Datos cargados correctamente.',
+        inserted: normalized.length,
+        rejectedCount: rejected.length,
+        rejected
+      });
     } catch (error) {
       return res.status(500).json({ message: 'Error cargando datos.', detail: error.message });
     }

@@ -1,0 +1,29 @@
+{
+  "GINEBRA": {
+    "city": "Ginebra",
+    "country": "Colombia",
+    "region": "Valle del Cauca",
+    "lat": 3.724,
+    "lng": -76.266,
+    "population": 21000,
+    "students": 4200
+  },
+  "GUATEMALA": {
+    "city": "Ciudad de Guatemala",
+    "country": "Guatemala",
+    "region": "Guatemala",
+    "lat": 14.6349,
+    "lng": -90.5069,
+    "population": 1050000,
+    "students": 220000
+  },
+  "POSADAS": {
+    "city": "Posadas",
+    "country": "Argentina",
+    "region": "Misiones",
+    "lat": -27.3671,
+    "lng": -55.8961,
+    "population": 360000,
+    "students": 78000
+  }
+}

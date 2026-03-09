@@ -19,6 +19,7 @@ const state = {
   },
   mapPoints: [],
   currentMapDataset: 'platform',
+  citySummaryConfig: null,
   coreProjectsById: {},
   activeColorFilter: 'ALL',
   activeRegionFilter: 'ALL',
@@ -28,7 +29,10 @@ const state = {
   charts: {
     maslowRadar: null,
     categoryBar: null,
-    bloomBar: null
+    bloomBar: null,
+    cityInfra: null,
+    cityPopulation: null,
+    cityStudentFocus: null
   }
 };
 
@@ -67,6 +71,9 @@ const compareNesstHint = document.getElementById('compareNesstHint');
 const compareActiveChips = document.getElementById('compareActiveChips');
 const bloomTaxonomyChart = document.getElementById('bloomTaxonomyChart');
 const bloomLevelList = document.getElementById('bloomLevelList');
+const cityInfraChart = document.getElementById('cityInfraChart');
+const cityPopulationChart = document.getElementById('cityPopulationChart');
+const cityStudentFocusChart = document.getElementById('cityStudentFocusChart');
 
 const INDICATOR_LABELS = {
   WATER: 'Agua potable',
@@ -89,6 +96,12 @@ const ACTOR_FILES = {
 };
 
 const OFFICIAL_OPEN_DATA_FILE = '/data-open/official-open-latam.json';
+const CITY_SUMMARY_CONFIG_FILE = '/data-core/city-summary-config.json';
+const CITY_KEY_BY_NAME = {
+  Ginebra: 'GINEBRA',
+  'Ciudad de Guatemala': 'GUATEMALA',
+  Posadas: 'POSADAS'
+};
 
 // SECTIONS
 const sectionIds = ['dashboard', 'mapa', 'comparador', 'maslow', 'embajadores', 'comunidad', 'proyectos', 'carga'];
@@ -96,10 +109,44 @@ const sectionIds = ['dashboard', 'mapa', 'comparador', 'maslow', 'embajadores', 
 // Regions for quick focus
 const REGION_PRESETS = {
   GINEBRA: { label: 'Ginebra (Valle del Cauca)', bounds: { minLat: 3.69, maxLat: 3.74, minLng: -76.28, maxLng: -76.25 } },
-  GUATEMALA: { label: 'Ciudad de Guatemala', bounds: { minLat: 14.53, maxLat: 14.74, minLng: -90.65, maxLng: -90.43 } },
-  ARGENTINA: { label: 'Posadas (Misiones)', bounds: { minLat: -27.52, maxLat: -27.30, minLng: -55.99, maxLng: -55.83 } },
+  GUATEMALA: { label: 'Ciudad de Guatemala (Guatemala)', bounds: { minLat: 14.53, maxLat: 14.74, minLng: -90.65, maxLng: -90.43 } },
+  ARGENTINA: { label: 'Posadas (Misiones, Argentina)', bounds: { minLat: -27.52, maxLat: -27.30, minLng: -55.99, maxLng: -55.83 } },
   ALL: { label: 'Latam Global', bounds: null }
 };
+
+const DEFAULT_CITY_SUMMARY_CONFIG = {
+  GINEBRA: {
+    city: 'Ginebra',
+    country: 'Colombia',
+    region: 'Valle del Cauca',
+    lat: 3.724,
+    lng: -76.266,
+    population: 21000,
+    students: 4200
+  },
+  GUATEMALA: {
+    city: 'Ciudad de Guatemala',
+    country: 'Guatemala',
+    region: 'Guatemala',
+    lat: 14.6349,
+    lng: -90.5069,
+    population: 1050000,
+    students: 220000
+  },
+  POSADAS: {
+    city: 'Posadas',
+    country: 'Argentina',
+    region: 'Misiones',
+    lat: -27.3671,
+    lng: -55.8961,
+    population: 360000,
+    students: 78000
+  }
+};
+
+function getCitySummaryConfig() {
+  return state.citySummaryConfig || DEFAULT_CITY_SUMMARY_CONFIG;
+}
 
 const MASLOW_COLORS = {
   'Autorrealización': '#10b981',
@@ -283,7 +330,8 @@ function pointInBounds(point, bounds) {
 }
 
 function inferCity(point) {
-  if (point.cityName) return point.cityName;
+  if (point.cityName) return normalizeCityName(point.cityName);
+  if (point.city) return normalizeCityName(point.city);
   if (point.zipCode === '763510') return 'Ginebra';
 
   const text = `${point.title || ''} ${point.projectName || ''}`.toLowerCase();
@@ -297,6 +345,183 @@ function inferCity(point) {
   if (found) return found.replace(/\b\w/g, char => char.toUpperCase());
 
   return 'Desconocida';
+}
+
+function normalizeCityName(value) {
+  const clean = String(value || '').trim().toLowerCase();
+  if (!clean) return 'Desconocida';
+  if (clean.includes('ginebra')) return 'Ginebra';
+  if (clean.includes('guatemala')) return 'Ciudad de Guatemala';
+  if (clean.includes('posadas') || clean.includes('misiones')) return 'Posadas';
+  return String(value || '').trim();
+}
+
+function inferInfrastructureBucket(point) {
+  const text = `${point?.siteType || ''} ${point?.title || ''} ${point?.description || ''}`.toLowerCase();
+  if (text.includes('hospital') || text.includes('ips') || text.includes('salud') || text.includes('médic') || text.includes('medic')) {
+    return 'medical';
+  }
+  if (text.includes('escuela') || text.includes('colegio') || text.includes('institución educativa') || text.includes('universidad')) {
+    return 'school';
+  }
+  if (text.includes('polic') || text.includes('comisaría') || text.includes('comisaria') || text.includes('estación')) {
+    return 'police';
+  }
+  return 'other';
+}
+
+function summarizeCityPoints(points) {
+  const medical = points.filter((point) => inferInfrastructureBucket(point) === 'medical').length;
+  const schools = points.filter((point) => inferInfrastructureBucket(point) === 'school').length;
+  const police = points.filter((point) => inferInfrastructureBucket(point) === 'police').length;
+  const studentRelated = points.filter((point) => Array.isArray(point.audience) && point.audience.includes('ESTUDIANTE')).length;
+
+  return {
+    medical,
+    schools,
+    police,
+    studentRelated,
+    total: points.length
+  };
+}
+
+function buildCitySummaryPopup(cityConfig, points) {
+  const summary = summarizeCityPoints(points);
+
+  return `
+    <div class="p-1 font-sans min-w-[250px]">
+      <h4 class="font-extrabold text-slate-900 border-b pb-1 mb-2">${cityConfig.city}, ${cityConfig.region}</h4>
+      <p class="text-xs text-slate-500 mb-2">${cityConfig.country} · Vista consolidada territorial</p>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="bg-slate-50 rounded p-2"><span class="text-slate-500">Centros médicos / hospitales</span><p class="font-extrabold text-slate-800">${summary.medical}</p></div>
+        <div class="bg-slate-50 rounded p-2"><span class="text-slate-500">Escuelas / colegios</span><p class="font-extrabold text-slate-800">${summary.schools}</p></div>
+        <div class="bg-slate-50 rounded p-2"><span class="text-slate-500">Estaciones de policía</span><p class="font-extrabold text-slate-800">${summary.police}</p></div>
+        <div class="bg-slate-50 rounded p-2"><span class="text-slate-500">Registros analizados</span><p class="font-extrabold text-slate-800">${summary.total}</p></div>
+      </div>
+      <div class="mt-2 text-xs bg-indigo-50 border border-indigo-100 rounded p-2">
+        <p><strong>Población estimada:</strong> ${cityConfig.population.toLocaleString('es-CO')}</p>
+        <p><strong>Estudiantes estimados:</strong> ${cityConfig.students.toLocaleString('es-CO')}</p>
+        <p><strong>Registros con enfoque estudiantil:</strong> ${summary.studentRelated}</p>
+      </div>
+    </div>
+  `;
+}
+
+function buildCitySummaryMarkers(points) {
+  const grouped = points.reduce((acc, point) => {
+    const city = normalizeCityName(inferCity(point));
+    if (!CITY_KEY_BY_NAME[city]) return acc;
+    if (!acc[city]) acc[city] = [];
+    acc[city].push(point);
+    return acc;
+  }, {});
+
+  const cityConfigMap = getCitySummaryConfig();
+
+  return Object.entries(grouped).map(([cityName, cityPoints]) => {
+    const key = CITY_KEY_BY_NAME[cityName];
+    const cityConfig = cityConfigMap[key];
+    if (!cityConfig) return null;
+    return {
+      cityName,
+      points: cityPoints,
+      lat: cityConfig.lat,
+      lng: cityConfig.lng,
+      popupHtml: buildCitySummaryPopup(cityConfig, cityPoints)
+    };
+  }).filter(Boolean);
+}
+
+function renderCitySummaryCharts(points) {
+  if (!cityInfraChart || !cityPopulationChart || !cityStudentFocusChart) return;
+
+  const cityConfigMap = getCitySummaryConfig();
+  const cityOrder = [
+    { key: 'GINEBRA', cityName: 'Ginebra' },
+    { key: 'GUATEMALA', cityName: 'Ciudad de Guatemala' },
+    { key: 'POSADAS', cityName: 'Posadas' }
+  ];
+
+  const rows = cityOrder
+    .map(({ key, cityName }) => {
+      const config = cityConfigMap[key];
+      if (!config) return null;
+      const cityPoints = points.filter((point) => normalizeCityName(inferCity(point)) === cityName);
+      return {
+        label: cityName,
+        population: Number(config.population || 0),
+        students: Number(config.students || 0),
+        ...summarizeCityPoints(cityPoints)
+      };
+    })
+    .filter(Boolean);
+
+  if (state.charts.cityInfra) state.charts.cityInfra.destroy();
+  if (state.charts.cityPopulation) state.charts.cityPopulation.destroy();
+  if (state.charts.cityStudentFocus) state.charts.cityStudentFocus.destroy();
+
+  state.charts.cityInfra = new Chart(cityInfraChart, {
+    type: 'bar',
+    data: {
+      labels: rows.map((row) => row.label),
+      datasets: [
+        { label: 'Centros médicos/hospitales', data: rows.map((row) => row.medical), backgroundColor: 'rgba(239, 68, 68, 0.75)', borderRadius: 8 },
+        { label: 'Escuelas/colegios', data: rows.map((row) => row.schools), backgroundColor: 'rgba(59, 130, 246, 0.75)', borderRadius: 8 },
+        { label: 'Estaciones de policía', data: rows.map((row) => row.police), backgroundColor: 'rgba(245, 158, 11, 0.75)', borderRadius: 8 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+
+  state.charts.cityPopulation = new Chart(cityPopulationChart, {
+    type: 'bar',
+    data: {
+      labels: rows.map((row) => row.label),
+      datasets: [
+        { label: 'Población estimada', data: rows.map((row) => row.population), backgroundColor: 'rgba(99, 102, 241, 0.72)', borderRadius: 8 },
+        { label: 'Estudiantes estimados', data: rows.map((row) => row.students), backgroundColor: 'rgba(16, 185, 129, 0.72)', borderRadius: 8 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => Number(value).toLocaleString('es-CO')
+          }
+        }
+      }
+    }
+  });
+
+  state.charts.cityStudentFocus = new Chart(cityStudentFocusChart, {
+    type: 'bar',
+    data: {
+      labels: rows.map((row) => row.label),
+      datasets: [
+        {
+          label: 'Registros con enfoque estudiantil',
+          data: rows.map((row) => row.studentRelated),
+          backgroundColor: 'rgba(14, 165, 233, 0.78)',
+          borderRadius: 8
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
 }
 
 function inferIndicatorCode(point) {
@@ -435,7 +660,18 @@ function renderPoints(points, options = {}) {
   state.markersLayer.clearLayers();
   const markerSize = markerSizeForZoom(state.map.getZoom());
 
-  points.forEach(point => {
+  const summaryMarkers = buildCitySummaryMarkers(points);
+  const summaryCities = new Set(summaryMarkers.map((marker) => marker.cityName));
+  const detailPoints = points.filter((point) => !summaryCities.has(normalizeCityName(inferCity(point))));
+
+  summaryMarkers.forEach((marker) => {
+    const icon = buildPinIcon('#0f766e', markerSize + 4);
+    L.marker([marker.lat, marker.lng], { icon })
+      .bindPopup(marker.popupHtml, { className: 'custom-popup rounded-2xl' })
+      .addTo(state.markersLayer);
+  });
+
+  detailPoints.forEach(point => {
     const color = point.color || (MASLOW_COLORS[point.maslowLevel] || '#4f46e5');
 
     const icon = buildPinIcon(color, markerSize);
@@ -451,8 +687,9 @@ function renderPoints(points, options = {}) {
     L.marker([point.lat, point.lng], { icon }).bindPopup(html, { className: 'custom-popup rounded-2xl' }).addTo(state.markersLayer);
   });
 
-  if (fitBounds && points.length > 0 && state.map) {
-    const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
+  const pointsForBounds = [...detailPoints, ...summaryMarkers];
+  if (fitBounds && pointsForBounds.length > 0 && state.map) {
+    const bounds = L.latLngBounds(pointsForBounds.map(p => [p.lat, p.lng]));
     state.map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
   } else if (fitBounds && state.map) {
     state.map.setView([4.5, -74.29], 4);
@@ -467,6 +704,7 @@ function refreshMapView() {
   renderCityFilterOptions(allPtsReg);
   const finalPts = getFilteredPoints();
   renderPoints(finalPts);
+  renderCitySummaryCharts(finalPts);
 
   // Dashboard Metrics Binding
   if (state.mapPoints) {
@@ -774,6 +1012,29 @@ async function loadOfficialOpenDataPoints() {
       points: normalizeMapPoints(fallback.mapPoints || fallback.records || [])
     };
   }
+}
+
+async function loadCitySummaryConfig() {
+  state.citySummaryConfig = DEFAULT_CITY_SUMMARY_CONFIG;
+
+  try {
+    const payload = await fetchPublicJson(CITY_SUMMARY_CONFIG_FILE);
+    const merged = Object.keys(DEFAULT_CITY_SUMMARY_CONFIG).reduce((acc, key) => {
+      const base = DEFAULT_CITY_SUMMARY_CONFIG[key];
+      const incoming = payload?.[key] || {};
+      acc[key] = {
+        ...base,
+        ...incoming,
+        population: Number.isFinite(Number(incoming.population)) ? Number(incoming.population) : base.population,
+        students: Number.isFinite(Number(incoming.students)) ? Number(incoming.students) : base.students,
+        lat: Number.isFinite(Number(incoming.lat)) ? Number(incoming.lat) : base.lat,
+        lng: Number.isFinite(Number(incoming.lng)) ? Number(incoming.lng) : base.lng
+      };
+      return acc;
+    }, {});
+
+    state.citySummaryConfig = merged;
+  } catch (_) {}
 }
 
 function applyMapDataset(datasetId = 'platform') {
@@ -1118,6 +1379,7 @@ async function loadAppData() {
 
   await Promise.allSettled([
     loadOfficialOpenDataPoints(),
+    loadCitySummaryConfig(),
     loadCoreProjectsData(),
     loadEducationalActorsData()
   ]);

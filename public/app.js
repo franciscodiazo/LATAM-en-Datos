@@ -1,6 +1,8 @@
 const state = {
   token: localStorage.getItem('latam_token') || '',
   user: null,
+  publicLandingMap: null,
+  publicLandingMarkersLayer: null,
   map: null,
   markersLayer: null,
   dashboardMap: null,
@@ -74,6 +76,7 @@ const bloomLevelList = document.getElementById('bloomLevelList');
 const cityInfraChart = document.getElementById('cityInfraChart');
 const cityPopulationChart = document.getElementById('cityPopulationChart');
 const cityStudentFocusChart = document.getElementById('cityStudentFocusChart');
+const publicLandingMapElement = document.getElementById('publicLandingMap');
 
 const INDICATOR_LABELS = {
   WATER: 'Agua potable',
@@ -1444,3 +1447,50 @@ if (PUBLIC_MAP_MODE) {
     console.error('Error cargando modo público:', error);
   });
 }
+
+function initializePublicLandingMap() {
+  if (!publicLandingMapElement || state.publicLandingMap) return;
+
+  state.publicLandingMap = L.map('publicLandingMap', { zoomControl: false }).setView([4.5709, -74.2973], 4);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(state.publicLandingMap);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(state.publicLandingMap);
+  state.publicLandingMarkersLayer = L.layerGroup().addTo(state.publicLandingMap);
+}
+
+function renderPublicLandingMapPoints(points) {
+  initializePublicLandingMap();
+  if (!state.publicLandingMap || !state.publicLandingMarkersLayer) return;
+
+  state.publicLandingMarkersLayer.clearLayers();
+  const markerSize = Math.max(16, Math.round(markerSizeForZoom(state.publicLandingMap.getZoom()) * 0.75));
+
+  points.forEach((point) => {
+    const color = point.color || (MASLOW_COLORS[point.maslowLevel] || '#4f46e5');
+    L.marker([point.lat, point.lng], { icon: buildPinIcon(color, markerSize) })
+      .bindPopup(`<strong>${point.title}</strong><br><small>${point.category || 'Dato'} • ${point.maslowLevel || 'N/A'}</small>`)
+      .addTo(state.publicLandingMarkersLayer);
+  });
+
+  if (points.length) {
+    const bounds = L.latLngBounds(points.map((point) => [point.lat, point.lng]));
+    state.publicLandingMap.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
+  }
+}
+
+async function loadPublicLandingData() {
+  if (!publicLandingMapElement || PUBLIC_MAP_MODE) return;
+  try {
+    const mapData = await apiGetPublic('/api/public/map/points');
+    const points = mapData.points || [];
+    renderPublicLandingMapPoints(points);
+  } catch (error) {
+    console.error('Error cargando mapa público de portada:', error);
+  }
+}
+
+loadPublicLandingData();

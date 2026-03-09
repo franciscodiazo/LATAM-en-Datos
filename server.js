@@ -2078,6 +2078,48 @@ app.get('/api/map/points', authenticate, async (_, res) => {
   }
 });
 
+app.get('/api/public/map/points', async (_, res) => {
+  try {
+    const records = await store.getRecords();
+    const points = records
+      .filter((record) => Number.isFinite(record.lat) && Number.isFinite(record.lng) && record.lat !== 0 && record.lng !== 0)
+      .map((record) => ({
+        id: record.id,
+        title: record.title,
+        description: record.description,
+        siteType: record.siteType,
+        country: record.country,
+        region: record.region,
+        city: record.city,
+        community: record.community,
+        schoolName: record.schoolName,
+        indicatorCode: record.indicatorCode,
+        measurementDate: record.measurementDate,
+        evidenceLevel: record.evidenceLevel,
+        sourceInstrument: record.sourceInstrument,
+        grade: record.grade,
+        teamName: record.teamName,
+        teacherName: record.teacherName,
+        category: record.category,
+        maslowLevel: record.maslowLevel,
+        zipCode: record.zipCode,
+        odsGoal: record.odsGoal,
+        smithsonianGuide: record.smithsonianGuide,
+        color: record.color,
+        lat: record.lat,
+        lng: record.lng,
+        sourceFormat: record.sourceFormat,
+        projectName: record.projectName,
+        createdBy: record.createdBy,
+        createdAt: record.createdAt
+      }));
+
+    res.json({ count: points.length, points, mode: 'public-readonly' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error consultando puntos públicos del mapa.', detail: error.message });
+  }
+});
+
 app.get('/api/projects/recent', authenticate, async (_, res) => {
   try {
     const projects = await store.getProjects();

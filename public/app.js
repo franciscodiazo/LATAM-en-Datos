@@ -110,6 +110,8 @@ const CITY_KEY_BY_NAME = {
   'Ciudad de Guatemala': 'GUATEMALA',
   Posadas: 'POSADAS'
 };
+const COMPARATIVE_CITIES = ['Ginebra', 'Ciudad de Guatemala', 'Posadas'];
+const PUBLIC_MAP_MODE = new URLSearchParams(window.location.search).get('public') === 'map';
 
 // SECTIONS
 const sectionIds = ['dashboard', 'mapa', 'comparador', 'maslow', 'embajadores', 'comunidad', 'proyectos', 'carga'];
@@ -202,6 +204,15 @@ async function apiGet(path) {
   const payload = await parseJsonResponse(response).catch(() => ({}));
   if (!response.ok) {
     throw new Error(payload.message || 'Error de solicitud.');
+  }
+  return payload;
+}
+
+async function apiGetPublic(path) {
+  const response = await fetch(apiUrl(path));
+  const payload = await parseJsonResponse(response).catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.message || 'Error de solicitud pública.');
   }
   return payload;
 }
@@ -817,7 +828,8 @@ function initComparisonEngine() {
 
   buildComparisonIndicatorOptions(state.mapPoints);
 
-  const allCities = [...new Set(state.mapPoints.map(p => inferCity(p)))].filter(c => c !== 'Desconocida').sort();
+  const detectedCities = [...new Set(state.mapPoints.map((point) => normalizeCityName(inferCity(point))))];
+  const allCities = COMPARATIVE_CITIES.filter((city) => detectedCities.includes(city));
 
   const fill = (el, defIdx) => {
     el.innerHTML = '<option value="">( Ninguna )</option>' + allCities.map((c, i) => `<option value="${c}" ${i === defIdx ? 'selected' : ''}>${c}</option>`).join('');
@@ -1394,4 +1406,41 @@ async function loadAppData() {
   ]);
 
   applyMapDataset(state.currentMapDataset);
+}
+
+function enablePublicReadOnlyMode() {
+  loginView.classList.add('hidden');
+  appView.classList.remove('hidden');
+  userBadge.textContent = 'Acceso público · solo lectura';
+  logoutBtn.classList.add('hidden');
+  adminUsersPanel.classList.add('hidden');
+  uploadNav.classList.add('hidden');
+  document.getElementById('divider-admin')?.classList.add('hidden');
+
+  document.querySelectorAll('.nav-item').forEach((button) => {
+    if (button.dataset.section !== 'mapa') {
+      button.classList.add('hidden');
+    }
+  });
+}
+
+async function loadPublicMapData() {
+  const mapData = await apiGetPublic('/api/public/map/points');
+  state.platformMapPoints = mapData.points || [];
+
+  await Promise.allSettled([
+    loadOfficialOpenDataPoints(),
+    loadCitySummaryConfig(),
+    loadCoreProjectsData()
+  ]);
+
+  applyMapDataset('platform');
+  setActiveSection('mapa');
+}
+
+if (PUBLIC_MAP_MODE) {
+  enablePublicReadOnlyMode();
+  loadPublicMapData().catch((error) => {
+    console.error('Error cargando modo público:', error);
+  });
 }

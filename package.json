@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "build:official-data": "node scripts/build-official-open-data.js",
+    "db:backup": "powershell -ExecutionPolicy Bypass -File ./scripts/db-backup-restore.ps1 -Mode backup",
+    "db:restore": "powershell -ExecutionPolicy Bypass -File ./scripts/db-backup-restore.ps1 -Mode restore"
   },
   "keywords": [
     "nodejs",
@@ -18,6 +21,7 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",

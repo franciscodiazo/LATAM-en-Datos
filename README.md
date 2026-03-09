@@ -83,6 +83,9 @@ Usuarios:
 - `GET /api/map/points`
 - `GET /api/projects/recent`
 - `POST /api/ai/chat`
+- `GET /api/open-data`
+- `GET /api/open-data/points`
+- `POST /api/open-data` (solo ADMIN y AGENTE_AUTORIZADO)
 - `GET /api/export/json|csv|geojson`
 
 ### Endpoint de asistente educativo (IA base)
@@ -164,6 +167,7 @@ Se agregaron datasets locales para visualización en la UI:
 En la sección **Radar Global** puedes seleccionar la fuente de datos del mapa entre:
 
 - Plataforma (API)
+- Datos Oficiales LATAM
 - Core FOOD
 - Core ECO
 - Core ADAPT
@@ -173,6 +177,22 @@ En **Motor de Ingesta** también quedan disponibles para carga rápida:
 - `public/datos-prueba.json`
 - `public/ejemplo-registros-investigadores.json`
 - `public/ejemplo-datos-almacenados.json` (ejemplo de cómo quedan almacenados los registros)
+- `public/data-open/official-open-latam.json` (dataset oficial generado)
+
+## Integración de datos oficiales (World Bank + referencia Smithsonian)
+
+Generar dataset oficial actualizado:
+
+```bash
+npm run build:official-data
+```
+
+Esto crea:
+
+- `public/data-open/official-open-latam.json` (consumo UI)
+- `data/open-data/official-open-latam.json` (repositorio para consulta/carga por API)
+
+La visualización de **Comparar Ciudades**, **Radar Global** y **Taxonomía de Bloom** usa este dataset cuando seleccionas **Datos Oficiales LATAM**.
 
 ### Administración de usuarios (dashboard / API)
 
@@ -210,6 +230,30 @@ $env:DB_NAME='latam_en_datos'
 $env:JWT_SECRET='cambia-esto-en-produccion'
 npm start
 ```
+
+## Respaldo y restore MySQL (para migrar a cPanel)
+
+Se agregó script unificado:
+
+- `scripts/db-backup-restore.ps1`
+
+Comandos:
+
+```bash
+npm run db:backup
+npm run db:restore
+```
+
+Salida de backup:
+
+- `dumps/latam_en_datos_YYYYMMDD_HHMMSS.sql`
+- `dumps/latam_en_datos_latest.sql`
+
+Para cPanel:
+
+1. Ejecuta `npm run db:backup`.
+2. Sube el archivo `dumps/latam_en_datos_latest.sql`.
+3. Importa en `phpMyAdmin` de cPanel sobre tu DB de producción.
 
 ## Nota de seguridad
 

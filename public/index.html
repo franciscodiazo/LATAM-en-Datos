@@ -331,6 +331,7 @@
                 <select id="mapDatasetSelect"
                   class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 shadow-sm focus:outline-none focus:border-indigo-400 cursor-pointer appearance-none pr-8">
                   <option value="platform">🛰️ Plataforma (API)</option>
+                  <option value="official-open-data">🌐 Datos Oficiales LATAM</option>
                   <option value="core-food">🥗 Core FOOD</option>
                   <option value="core-resiliencia-ecosistemica">🌿 Core ECO</option>
                   <option value="core-capacidad-comunitaria">💧 Core ADAPT</option>
@@ -496,6 +497,19 @@
             </h4>
             <ul id="maslowData" class="grid sm:grid-cols-2 gap-4 text-sm font-medium"></ul>
           </div>
+
+          <div class="mt-8 bento-card p-6 md:p-8">
+            <h4 class="flex items-center gap-3 font-extrabold text-slate-800 text-lg mb-6">
+              <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-600 flex justify-center items-center">🧠</div>
+              Taxonomía de Bloom (dataset activo)
+            </h4>
+            <div class="grid lg:grid-cols-[1fr_260px] gap-6 items-start">
+              <div class="min-h-[280px]">
+                <canvas id="bloomTaxonomyChart"></canvas>
+              </div>
+              <ul id="bloomLevelList" class="space-y-3"></ul>
+            </div>
+          </div>
         </section>
 
         <!-- =================== EMBAJADORES (SMITHSONIAN) =================== -->
@@ -626,6 +640,7 @@
                   <option value="/datos-prueba.json">datos-prueba.json</option>
                   <option value="/ejemplo-registros-investigadores.json">ejemplo-registros-investigadores.json</option>
                   <option value="/ejemplo-datos-almacenados.json">ejemplo-datos-almacenados.json</option>
+                  <option value="/data-open/official-open-latam.json">data-open/official-open-latam.json</option>
                   <option value="/data-core/core-food.json">data-core/core-food.json</option>
                   <option value="/data-core/core-resiliencia-ecosistemica.json">data-core/core-resiliencia-ecosistemica.json</option>
                   <option value="/data-core/core-capacidad-comunitaria.json">data-core/core-capacidad-comunitaria.json</option>

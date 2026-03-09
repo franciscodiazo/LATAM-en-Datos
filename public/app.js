@@ -10,6 +10,13 @@ const state = {
   socket: null,
   recordsCache: [],
   platformMapPoints: [],
+  officialOpenData: {
+    datasetId: '',
+    title: '',
+    generatedAt: '',
+    sourceNotes: [],
+    points: []
+  },
   mapPoints: [],
   currentMapDataset: 'platform',
   coreProjectsById: {},
@@ -20,7 +27,8 @@ const state = {
   activeMaslowFilter: 'ALL',
   charts: {
     maslowRadar: null,
-    categoryBar: null
+    categoryBar: null,
+    bloomBar: null
   }
 };
 
@@ -57,6 +65,8 @@ const compareDateTo = document.getElementById('compareDateTo');
 const compareNesstIndicators = document.getElementById('compareNesstIndicators');
 const compareNesstHint = document.getElementById('compareNesstHint');
 const compareActiveChips = document.getElementById('compareActiveChips');
+const bloomTaxonomyChart = document.getElementById('bloomTaxonomyChart');
+const bloomLevelList = document.getElementById('bloomLevelList');
 
 const INDICATOR_LABELS = {
   WATER: 'Agua potable',
@@ -77,6 +87,8 @@ const ACTOR_FILES = {
   teacherData: '/data-actores/actor-docentes.json',
   researchData: '/data-actores/actor-investigadores.json'
 };
+
+const OFFICIAL_OPEN_DATA_FILE = '/data-open/official-open-latam.json';
 
 // SECTIONS
 const sectionIds = ['dashboard', 'mapa', 'comparador', 'maslow', 'embajadores', 'comunidad', 'proyectos', 'carga'];
@@ -308,6 +320,17 @@ function toDateOnly(value) {
   return date.toISOString().slice(0, 10);
 }
 
+function inferBloomLevel(point) {
+  if (point?.bloomLevel) return String(point.bloomLevel).trim();
+  const maslow = String(point?.maslowLevel || '').toLowerCase();
+  if (maslow.includes('fisiol')) return 'Recordar';
+  if (maslow.includes('seguridad')) return 'Comprender';
+  if (maslow.includes('afili')) return 'Aplicar';
+  if (maslow.includes('reconoc')) return 'Analizar';
+  if (maslow.includes('autorreal')) return 'Evaluar';
+  return 'Crear';
+}
+
 function mapSmithsonianBucket(point) {
   const raw = String(point.smithsonianGuide || '').toLowerCase();
   if (raw.includes('aliment')) return 'ALIMENTACION';
@@ -373,11 +396,13 @@ function renderIndicatorFilterOptions(points) {
 
 function buildComparisonIndicatorOptions(points) {
   if (!compareIndicatorFilter) return;
+  const current = compareIndicatorFilter.value || 'ALL';
   const set = new Set(points.map((p) => inferIndicatorCode(p)));
   const codes = [...set].sort((a, b) => formatIndicatorLabel(a).localeCompare(formatIndicatorLabel(b)));
   compareIndicatorFilter.innerHTML =
     '<option value="ALL">Todos los indicadores</option>' +
     codes.map((code) => `<option value="${code}">${formatIndicatorLabel(code)}</option>`).join('');
+  compareIndicatorFilter.value = codes.includes(current) || current === 'ALL' ? current : 'ALL';
 }
 
 function renderRegionFilters() {
@@ -453,6 +478,87 @@ function refreshMapView() {
     safeSet('card-guatemala-datos', REGION_PRESETS.GUATEMALA.bounds);
     safeSet('card-argentina-datos', REGION_PRESETS.ARGENTINA.bounds);
   }
+
+  renderMaslowHighlights(state.mapPoints);
+  renderBloomTaxonomy(state.mapPoints);
+}
+
+function renderMaslowHighlights(points) {
+  const maslowData = document.getElementById('maslowData');
+  if (!maslowData) return;
+
+  const rows = [...points]
+    .sort((a, b) => new Date(b.measurementDate || b.createdAt || 0) - new Date(a.measurementDate || a.createdAt || 0))
+    .slice(0, 8);
+
+  if (!rows.length) {
+    maslowData.innerHTML = '<li class="bento-card p-4 text-slate-500">Sin registros disponibles en el dataset activo.</li>';
+    return;
+  }
+
+  maslowData.innerHTML = rows
+    .map(
+      (row) => `
+    <li class="bento-card p-4 bg-white">
+      <p class="font-extrabold text-slate-800 text-sm">${row.title || 'Registro'}</p>
+      <p class="text-xs text-slate-500 mt-1">${inferCity(row)} · ${formatIndicatorLabel(inferIndicatorCode(row))}</p>
+      <p class="text-xs text-slate-600 mt-1">Maslow: ${row.maslowLevel || 'N/A'} · Bloom: ${inferBloomLevel(row)}</p>
+    </li>
+  `
+    )
+    .join('');
+}
+
+function renderBloomTaxonomy(points) {
+  if (!bloomLevelList) return;
+
+  const counts = points.reduce((acc, point) => {
+    const lvl = inferBloomLevel(point);
+    acc[lvl] = (acc[lvl] || 0) + 1;
+    return acc;
+  }, {});
+
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  if (!entries.length) {
+    bloomLevelList.innerHTML = '<li class="text-slate-500 text-sm">Sin datos Bloom en el dataset activo.</li>';
+    if (state.charts.bloomBar) {
+      state.charts.bloomBar.destroy();
+      state.charts.bloomBar = null;
+    }
+    return;
+  }
+
+  bloomLevelList.innerHTML = entries
+    .map(
+      ([level, count]) =>
+        `<li class="flex items-center justify-between text-sm"><span class="font-bold text-slate-700">${level}</span><span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-xs">${count}</span></li>`
+    )
+    .join('');
+
+  if (!bloomTaxonomyChart) return;
+
+  if (state.charts.bloomBar) state.charts.bloomBar.destroy();
+  state.charts.bloomBar = new Chart(bloomTaxonomyChart, {
+    type: 'bar',
+    data: {
+      labels: entries.map(([level]) => level),
+      datasets: [
+        {
+          label: 'Registros por nivel Bloom',
+          data: entries.map(([, count]) => count),
+          backgroundColor: 'rgba(79, 70, 229, 0.75)',
+          borderRadius: 8
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
 }
 
 // COMPARISON ENGINE (CHART JS)
@@ -626,17 +732,48 @@ function extractRecordsFromPayload(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.records)) return payload.records;
   if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.points)) return payload.points;
+  if (Array.isArray(payload?.mapPoints)) return payload.mapPoints;
   return [];
+}
+
+function normalizeMapPoints(points = []) {
+  return points
+    .filter((point) => Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng)))
+    .map((point) => ({
+      ...point,
+      lat: Number(point.lat),
+      lng: Number(point.lng)
+    }));
 }
 
 function getCoreDatasetPoints(datasetId) {
   const project = state.coreProjectsById[datasetId];
   const mapPoints = Array.isArray(project?.mapPoints) ? project.mapPoints : [];
-  return mapPoints.filter((point) => Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng))).map((point) => ({
-    ...point,
-    lat: Number(point.lat),
-    lng: Number(point.lng)
-  }));
+  return normalizeMapPoints(mapPoints);
+}
+
+async function loadOfficialOpenDataPoints() {
+  try {
+    const payload = await apiGet('/api/open-data/points');
+    state.officialOpenData = {
+      datasetId: payload.datasetId || 'official-open-latam-fase1',
+      title: payload.title || 'Datos Oficiales LATAM',
+      generatedAt: payload.generatedAt || '',
+      sourceNotes: Array.isArray(payload.sourceNotes) ? payload.sourceNotes : [],
+      points: normalizeMapPoints(payload.points || [])
+    };
+    return;
+  } catch (_) {
+    const fallback = await fetchPublicJson(OFFICIAL_OPEN_DATA_FILE);
+    state.officialOpenData = {
+      datasetId: fallback.datasetId || 'official-open-latam-fase1',
+      title: fallback.title || 'Datos Oficiales LATAM',
+      generatedAt: fallback.generatedAt || '',
+      sourceNotes: Array.isArray(fallback.sourceNotes) ? fallback.sourceNotes : [],
+      points: normalizeMapPoints(fallback.mapPoints || fallback.records || [])
+    };
+  }
 }
 
 function applyMapDataset(datasetId = 'platform') {
@@ -644,15 +781,20 @@ function applyMapDataset(datasetId = 'platform') {
   state.activeRegionFilter = 'ALL';
   state.activeCityFilter = 'ALL';
   state.activeIndicatorFilter = 'ALL';
+  state.activeMaslowFilter = 'ALL';
 
   if (datasetId === 'platform') {
     state.mapPoints = state.platformMapPoints;
+  } else if (datasetId === 'official-open-data') {
+    state.mapPoints = state.officialOpenData.points;
   } else {
     state.mapPoints = getCoreDatasetPoints(datasetId);
   }
 
+  if (mapDatasetSelect) mapDatasetSelect.value = datasetId;
   if (cityFilterSelect) cityFilterSelect.value = 'ALL';
   if (mapIndicatorFilter) mapIndicatorFilter.value = 'ALL';
+  buildComparisonIndicatorOptions(state.mapPoints);
   refreshMapView();
 }
 
@@ -683,8 +825,20 @@ function renderProjectCoreData(project) {
 async function loadCoreProjectsData() {
   if (!projectCoreSelect) return;
 
-  const payloads = await Promise.all(CORE_PROJECT_FILES.map((path) => fetchPublicJson(path)));
+  let payloads = [];
+  try {
+    const apiPayload = await apiGet('/api/core-projects');
+    payloads = Array.isArray(apiPayload?.projects) ? apiPayload.projects : [];
+  } catch (_) {
+    payloads = await Promise.all(CORE_PROJECT_FILES.map((path) => fetchPublicJson(path)));
+  }
+
   const valid = payloads.filter((item) => item?.projectId);
+  if (!valid.length) {
+    projectCoreDataView.innerHTML = '<div class="bento-card p-4 text-sm text-rose-600">No se encontraron proyectos CORE.</div>';
+    return;
+  }
+
   state.coreProjectsById = valid.reduce((acc, item) => {
     acc[item.projectId] = item;
     return acc;
@@ -726,6 +880,20 @@ function renderActorItems(targetId, payload) {
 }
 
 async function loadEducationalActorsData() {
+  try {
+    const payload = await apiGet('/api/actors');
+    const actors = Array.isArray(payload?.actors) ? payload.actors : [];
+    const byRole = actors.reduce((acc, actor) => {
+      acc[String(actor.actor || '').toUpperCase()] = actor;
+      return acc;
+    }, {});
+
+    renderActorItems('studentData', byRole.ESTUDIANTE || { items: [] });
+    renderActorItems('teacherData', byRole.DOCENTE || { items: [] });
+    renderActorItems('researchData', byRole.INVESTIGADOR || { items: [] });
+    return;
+  } catch (_) {}
+
   const [students, teachers, researchers] = await Promise.all([
     fetchPublicJson(ACTOR_FILES.studentData),
     fetchPublicJson(ACTOR_FILES.teacherData),
@@ -782,6 +950,15 @@ logoutBtn.addEventListener('click', () => {
 
 document.querySelectorAll('.nav-item').forEach(b => {
   b.addEventListener('click', () => setActiveSection(b.dataset.section));
+});
+
+document.querySelectorAll('.m-level').forEach((button) => {
+  button.addEventListener('click', () => {
+    const level = button.dataset.maslow;
+    state.activeMaslowFilter = state.activeMaslowFilter === level ? 'ALL' : level;
+    setActiveSection('mapa');
+    refreshMapView();
+  });
 });
 
 if (regionFilterBar) {
@@ -940,6 +1117,7 @@ async function loadAppData() {
   state.platformMapPoints = mapData.points || [];
 
   await Promise.allSettled([
+    loadOfficialOpenDataPoints(),
     loadCoreProjectsData(),
     loadEducationalActorsData()
   ]);

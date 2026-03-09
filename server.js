@@ -11,6 +11,8 @@ const mysql = require('mysql2/promise');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
 
+require('dotenv').config();
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -18,10 +20,22 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'latam-datos-secret-dev';
 const USE_MYSQL = process.env.USE_MYSQL === 'true' || process.env.NODE_ENV === 'production';
+const DB_AUTO_CREATE = process.env.DB_AUTO_CREATE === 'true';
 const dataDir = path.join(__dirname, 'data');
 const usersFile = path.join(dataDir, 'users.json');
 const recordsFile = path.join(dataDir, 'records.json');
 const projectsFile = path.join(dataDir, 'projects.json');
+const openDataDir = path.join(dataDir, 'open-data');
+const openDataFile = path.join(openDataDir, 'official-open-latam.json');
+const coreDataDir = path.join(__dirname, 'public', 'data-core');
+const coreProjectFiles = ['core-food.json', 'core-resiliencia-ecosistemica.json', 'core-capacidad-comunitaria.json'];
+const frameworkFile = path.join(coreDataDir, 'propuesta-justificacion-ejemplo.json');
+const actorsDataDir = path.join(__dirname, 'public', 'data-actores');
+const actorFilesByRole = {
+  ESTUDIANTE: 'actor-estudiantes.json',
+  DOCENTE: 'actor-docentes.json',
+  INVESTIGADOR: 'actor-investigadores.json'
+};
 
 const Roles = {
   ADMIN: 'ADMIN',
@@ -136,6 +150,16 @@ const seedProjects = [
   }
 ];
 
+const seedOpenData = {
+  datasetId: 'official-open-latam-fase1',
+  title: 'Datos Oficiales LATAM — Fase 1',
+  summary: 'Repositorio de datos oficiales para análisis comparativo en nodos territoriales LATAM.',
+  generatedAt: new Date().toISOString(),
+  sourceNotes: [],
+  records: [],
+  mapPoints: []
+};
+
 let store;
 
 function toPublicUser(user) {
@@ -164,6 +188,126 @@ async function readJson(filePath) {
 
 async function writeJson(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function normalizeCoreProjectPayload(payload) {
+  return {
+    projectId: String(payload?.projectId || '').trim(),
+    title: String(payload?.title || '').trim(),
+    summary: String(payload?.summary || '').trim(),
+    focusOds: Array.isArray(payload?.focusOds) ? payload.focusOds.map((item) => String(item).trim()).filter(Boolean) : [],
+    records: Array.isArray(payload?.records)
+      ? payload.records.map((record) => ({
+          indicator: record?.indicator || '',
+          meta: record?.meta || '',
+          ods: record?.ods || '',
+          tipoDato: record?.tipoDato || '',
+          instrumento: record?.instrumento || '',
+          valorEjemplo: record?.valorEjemplo ?? null,
+          unidad: record?.unidad || '',
+          territorio: record?.territorio || ''
+        }))
+      : [],
+    mapPoints: Array.isArray(payload?.mapPoints)
+      ? payload.mapPoints.map((point) => ({
+          title: point?.title || '',
+          description: point?.description || '',
+          siteType: point?.siteType || '',
+          category: point?.category || '',
+          maslowLevel: point?.maslowLevel || '',
+          zipCode: point?.zipCode || '',
+          odsGoal: point?.odsGoal || '',
+          smithsonianGuide: point?.smithsonianGuide || '',
+          audience: Array.isArray(point?.audience) ? point.audience : [],
+          color: point?.color || '#2563EB',
+          lat: Number.isFinite(Number(point?.lat)) ? Number(point.lat) : 0,
+          lng: Number.isFinite(Number(point?.lng)) ? Number(point.lng) : 0,
+          projectName: point?.projectName || '',
+          cityName: point?.cityName || ''
+        }))
+      : []
+  };
+}
+
+async function readCoreProjectsFromFiles() {
+  const payloads = await Promise.all(
+    coreProjectFiles.map(async (fileName) => {
+      const fullPath = path.join(coreDataDir, fileName);
+      const payload = await readJson(fullPath);
+      return normalizeCoreProjectPayload(payload);
+    })
+  );
+
+  return payloads.filter((project) => project.projectId);
+}
+
+function normalizeActorPayload(payload) {
+  return {
+    actor: String(payload?.actor || '').trim(),
+    title: String(payload?.title || '').trim(),
+    items: Array.isArray(payload?.items)
+      ? payload.items.map((item) => ({
+          tema: item?.tema || '',
+          accion: item?.accion || '',
+          indicador: item?.indicador || '',
+          ods: item?.ods || '',
+          instrumento: item?.instrumento || ''
+        }))
+      : []
+  };
+}
+
+async function readActorsFromFiles() {
+  const entries = Object.entries(actorFilesByRole);
+  const payloads = await Promise.all(
+    entries.map(async ([role, fileName]) => {
+      const payload = await readJson(path.join(actorsDataDir, fileName));
+      const normalized = normalizeActorPayload(payload);
+      if (!normalized.actor) {
+        normalized.actor = role;
+      }
+      return normalized;
+    })
+  );
+
+  return payloads.filter((payload) => payload.actor);
+}
+
+function normalizeFrameworkPayload(payload) {
+  const justificacion = payload?.justificacion || {};
+  const matriz = payload?.matrizIndicadores || {};
+
+  const normalizedBlocks = Object.entries(matriz).reduce((acc, [blockName, rows]) => {
+    if (!Array.isArray(rows)) {
+      acc[blockName] = [];
+      return acc;
+    }
+    acc[blockName] = rows.map((item) => ({
+      indicador: item?.indicador || '',
+      ods: item?.ods || '',
+      meta: item?.meta || '',
+      tipoDato: item?.tipoDato || '',
+      instrumento: item?.instrumento || ''
+    }));
+    return acc;
+  }, {});
+
+  return {
+    project: String(payload?.project || 'LATAM EN DATOS').trim(),
+    justificacion: {
+      odsAlineados: Array.isArray(justificacion?.odsAlineados) ? justificacion.odsAlineados.map((item) => String(item).trim()).filter(Boolean) : [],
+      metasPriorizadas: Array.isArray(justificacion?.metasPriorizadas)
+        ? justificacion.metasPriorizadas.map((item) => String(item).trim()).filter(Boolean)
+        : [],
+      enfoque: String(justificacion?.enfoque || '').trim()
+    },
+    matrizIndicadores: normalizedBlocks
+  };
+}
+
+async function readFrameworkFromFile() {
+  const payload = await readJson(frameworkFile);
+  return normalizeFrameworkPayload(payload);
 }
 
 class JsonStore {
@@ -306,6 +450,48 @@ class JsonStore {
     return readJson(projectsFile);
   }
 
+  async getOpenDataPayload() {
+    return readOpenDataStore();
+  }
+
+  async addOpenDataRecords({ records, title, summary, sourceNotes }) {
+    const payload = await this.getOpenDataPayload();
+    const merged = [...payload.records, ...records];
+    const nextPayload = {
+      ...payload,
+      title: title || payload.title,
+      summary: summary || payload.summary,
+      sourceNotes: Array.isArray(sourceNotes) ? sourceNotes : payload.sourceNotes,
+      generatedAt: new Date().toISOString(),
+      records: merged,
+      mapPoints: merged.map((record) => toOpenDataPoint(record))
+    };
+    await writeOpenDataStore(nextPayload);
+    return { total: nextPayload.records.length };
+  }
+
+  async getCoreProjects() {
+    return readCoreProjectsFromFiles();
+  }
+
+  async getCoreProjectById(projectId) {
+    const projects = await this.getCoreProjects();
+    return projects.find((project) => project.projectId === projectId) || null;
+  }
+
+  async getActors() {
+    return readActorsFromFiles();
+  }
+
+  async getActorByRole(role) {
+    const actors = await this.getActors();
+    return actors.find((actor) => String(actor.actor).toUpperCase() === String(role).toUpperCase()) || null;
+  }
+
+  async getFramework() {
+    return readFrameworkFromFile();
+  }
+
   async getStorageType() {
     return 'json';
   }
@@ -327,14 +513,16 @@ class MySqlStore {
   }
 
   async init() {
-    const bootstrap = await mysql.createConnection({
-      host: this.connectionConfig.host,
-      port: this.connectionConfig.port,
-      user: this.connectionConfig.user,
-      password: this.connectionConfig.password
-    });
-    await bootstrap.query(`CREATE DATABASE IF NOT EXISTS \`${this.connectionConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-    await bootstrap.end();
+    if (DB_AUTO_CREATE) {
+      const bootstrap = await mysql.createConnection({
+        host: this.connectionConfig.host,
+        port: this.connectionConfig.port,
+        user: this.connectionConfig.user,
+        password: this.connectionConfig.password
+      });
+      await bootstrap.query(`CREATE DATABASE IF NOT EXISTS \`${this.connectionConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+      await bootstrap.end();
+    }
 
     this.pool = mysql.createPool(this.connectionConfig);
 
@@ -437,6 +625,181 @@ class MySqlStore {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS open_datasets (
+        dataset_id VARCHAR(120) PRIMARY KEY,
+        title VARCHAR(220) NOT NULL,
+        summary TEXT,
+        generated_at DATETIME NOT NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS open_source_notes (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        dataset_id VARCHAR(120) NOT NULL,
+        name VARCHAR(180) NOT NULL,
+        url VARCHAR(400),
+        note TEXT,
+        indicators JSON,
+        FOREIGN KEY (dataset_id) REFERENCES open_datasets(dataset_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS open_records (
+        id VARCHAR(36) PRIMARY KEY,
+        dataset_id VARCHAR(120) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        description TEXT,
+        site_type VARCHAR(150),
+        country VARCHAR(80),
+        region VARCHAR(120),
+        city VARCHAR(120),
+        community VARCHAR(150),
+        school_name VARCHAR(180),
+        indicator_code VARCHAR(40),
+        measurement_date DATE,
+        evidence_level VARCHAR(40),
+        source_instrument VARCHAR(220),
+        category VARCHAR(80),
+        maslow_level VARCHAR(120),
+        bloom_level VARCHAR(80),
+        smithsonian_guide VARCHAR(120),
+        audience JSON,
+        color VARCHAR(20),
+        lat DOUBLE,
+        lng DOUBLE,
+        project_name VARCHAR(180),
+        source_format VARCHAR(20),
+        created_by VARCHAR(80),
+        created_at DATETIME NOT NULL,
+        official_value DOUBLE,
+        official_unit VARCHAR(80),
+        official_year INT,
+        source_url VARCHAR(500),
+        FOREIGN KEY (dataset_id) REFERENCES open_datasets(dataset_id) ON DELETE CASCADE,
+        INDEX idx_open_records_context (country, city, indicator_code, official_year)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS core_projects (
+        project_id VARCHAR(120) PRIMARY KEY,
+        title VARCHAR(220) NOT NULL,
+        summary TEXT
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS core_focus_ods (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        project_id VARCHAR(120) NOT NULL,
+        ods VARCHAR(80) NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES core_projects(project_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS core_records (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        project_id VARCHAR(120) NOT NULL,
+        indicator VARCHAR(240),
+        meta VARCHAR(120),
+        ods VARCHAR(120),
+        tipo_dato VARCHAR(120),
+        instrumento VARCHAR(240),
+        valor_ejemplo JSON,
+        unidad VARCHAR(180),
+        territorio VARCHAR(180),
+        FOREIGN KEY (project_id) REFERENCES core_projects(project_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS core_map_points (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        project_id VARCHAR(120) NOT NULL,
+        title VARCHAR(220),
+        description TEXT,
+        site_type VARCHAR(150),
+        category VARCHAR(80),
+        maslow_level VARCHAR(120),
+        zip_code VARCHAR(20),
+        ods_goal VARCHAR(100),
+        smithsonian_guide VARCHAR(120),
+        audience JSON,
+        color VARCHAR(20),
+        lat DOUBLE,
+        lng DOUBLE,
+        project_name VARCHAR(180),
+        city_name VARCHAR(120),
+        FOREIGN KEY (project_id) REFERENCES core_projects(project_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS actors (
+        actor_code VARCHAR(80) PRIMARY KEY,
+        title VARCHAR(140) NOT NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS actor_items (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        actor_code VARCHAR(80) NOT NULL,
+        tema VARCHAR(220),
+        accion TEXT,
+        indicador VARCHAR(220),
+        ods VARCHAR(120),
+        instrumento VARCHAR(220),
+        FOREIGN KEY (actor_code) REFERENCES actors(actor_code) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS framework_projects (
+        project_key VARCHAR(120) PRIMARY KEY,
+        project_name VARCHAR(180) NOT NULL,
+        enfoque TEXT
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS framework_ods (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        project_key VARCHAR(120) NOT NULL,
+        ods VARCHAR(80) NOT NULL,
+        FOREIGN KEY (project_key) REFERENCES framework_projects(project_key) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS framework_metas (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        project_key VARCHAR(120) NOT NULL,
+        meta VARCHAR(80) NOT NULL,
+        FOREIGN KEY (project_key) REFERENCES framework_projects(project_key) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS framework_indicators (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        project_key VARCHAR(120) NOT NULL,
+        block_name VARCHAR(120) NOT NULL,
+        order_index INT NOT NULL,
+        indicador VARCHAR(280),
+        ods VARCHAR(120),
+        meta VARCHAR(120),
+        tipo_dato VARCHAR(120),
+        instrumento VARCHAR(240),
+        FOREIGN KEY (project_key) REFERENCES framework_projects(project_key) ON DELETE CASCADE,
+        INDEX idx_framework_block (project_key, block_name, order_index)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     const [[userCount]] = await this.pool.query('SELECT COUNT(*) AS count FROM users');
     if (Number(userCount.count) === 0) {
       const passwordHash = await bcrypt.hash('Latam2026*', 10);
@@ -471,6 +834,11 @@ class MySqlStore {
         );
       }
     }
+
+    await this.seedOpenDataIfEmpty();
+    await this.seedCoreProjectsIfEmpty();
+    await this.seedActorsIfEmpty();
+    await this.seedFrameworkIfEmpty();
   }
 
   async getUsers() {
@@ -634,6 +1002,524 @@ class MySqlStore {
       'SELECT id, title, summary, owner, created_at AS createdAt, source FROM projects ORDER BY created_at DESC'
     );
     return rows;
+  }
+
+  normalizeOpenDataRow(row) {
+    const base = this.normalizeRecordRow({
+      ...row,
+      measurementDate: row.measurementDate,
+      createdAt: row.createdAt
+    });
+    return {
+      ...base,
+      bloomLevel: row.bloomLevel || 'Analizar',
+      officialValue: Number.isFinite(Number(row.officialValue)) ? Number(row.officialValue) : null,
+      officialUnit: row.officialUnit || '',
+      officialYear: Number.isFinite(Number(row.officialYear)) ? Number(row.officialYear) : null,
+      sourceUrl: row.sourceUrl || ''
+    };
+  }
+
+  async getOpenDataPayload() {
+    const [datasetRows] = await this.pool.query(
+      'SELECT dataset_id AS datasetId, title, summary, generated_at AS generatedAt FROM open_datasets ORDER BY generated_at DESC LIMIT 1'
+    );
+    const dataset = datasetRows[0] || {
+      datasetId: seedOpenData.datasetId,
+      title: seedOpenData.title,
+      summary: seedOpenData.summary,
+      generatedAt: new Date().toISOString()
+    };
+
+    const [sourceRows] = await this.pool.execute(
+      'SELECT name, url, note, indicators FROM open_source_notes WHERE dataset_id = ? ORDER BY id ASC',
+      [dataset.datasetId]
+    );
+
+    const sourceNotes = sourceRows.map((row) => {
+      let indicators = row.indicators;
+      if (typeof indicators === 'string') {
+        try {
+          indicators = JSON.parse(indicators);
+        } catch {
+          indicators = [];
+        }
+      }
+      return {
+        name: row.name,
+        url: row.url || '',
+        note: row.note || '',
+        indicators: Array.isArray(indicators) ? indicators : []
+      };
+    });
+
+    const [recordRows] = await this.pool.execute(
+      `SELECT id, title, description, site_type AS siteType, country, region, city, community, school_name AS schoolName,
+              indicator_code AS indicatorCode, measurement_date AS measurementDate, evidence_level AS evidenceLevel,
+              source_instrument AS sourceInstrument, category, maslow_level AS maslowLevel, bloom_level AS bloomLevel,
+              smithsonian_guide AS smithsonianGuide, audience, color, lat, lng, project_name AS projectName,
+              source_format AS sourceFormat, created_by AS createdBy, created_at AS createdAt,
+              official_value AS officialValue, official_unit AS officialUnit, official_year AS officialYear, source_url AS sourceUrl
+       FROM open_records WHERE dataset_id = ? ORDER BY created_at DESC`,
+      [dataset.datasetId]
+    );
+
+    const records = recordRows.map((row) => this.normalizeOpenDataRow(row));
+
+    return {
+      datasetId: dataset.datasetId,
+      title: dataset.title,
+      summary: dataset.summary,
+      generatedAt: dataset.generatedAt,
+      sourceNotes,
+      records,
+      mapPoints: records.map((record) => toOpenDataPoint(record))
+    };
+  }
+
+  async addOpenDataRecords({ records, title, summary, sourceNotes }) {
+    const existing = await this.getOpenDataPayload();
+    const datasetId = existing.datasetId || seedOpenData.datasetId;
+    const generatedAt = new Date().toISOString();
+
+    const connection = await this.pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      await connection.execute(
+        `INSERT INTO open_datasets (dataset_id, title, summary, generated_at)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE title = VALUES(title), summary = VALUES(summary), generated_at = VALUES(generated_at)`,
+        [datasetId, title || existing.title, summary || existing.summary, generatedAt]
+      );
+
+      if (Array.isArray(sourceNotes)) {
+        await connection.execute('DELETE FROM open_source_notes WHERE dataset_id = ?', [datasetId]);
+        for (const note of sourceNotes) {
+          await connection.execute(
+            'INSERT INTO open_source_notes (dataset_id, name, url, note, indicators) VALUES (?, ?, ?, ?, ?)',
+            [datasetId, note?.name || 'Fuente', note?.url || '', note?.note || '', JSON.stringify(Array.isArray(note?.indicators) ? note.indicators : [])]
+          );
+        }
+      }
+
+      for (const record of records) {
+        await connection.execute(
+          `INSERT INTO open_records (
+            id, dataset_id, title, description, site_type, country, region, city, community, school_name,
+            indicator_code, measurement_date, evidence_level, source_instrument, category, maslow_level,
+            bloom_level, smithsonian_guide, audience, color, lat, lng, project_name, source_format,
+            created_by, created_at, official_value, official_unit, official_year, source_url
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+          [
+            record.id,
+            datasetId,
+            record.title,
+            record.description,
+            record.siteType,
+            record.country,
+            record.region,
+            record.city,
+            record.community,
+            record.schoolName,
+            record.indicatorCode,
+            record.measurementDate || null,
+            record.evidenceLevel,
+            record.sourceInstrument,
+            record.category,
+            record.maslowLevel,
+            record.bloomLevel || 'Analizar',
+            record.smithsonianGuide,
+            JSON.stringify(record.audience || []),
+            record.color,
+            record.lat,
+            record.lng,
+            record.projectName,
+            record.sourceFormat,
+            record.createdBy,
+            record.createdAt,
+            Number.isFinite(Number(record.officialValue)) ? Number(record.officialValue) : null,
+            record.officialUnit || '',
+            Number.isFinite(Number(record.officialYear)) ? Number(record.officialYear) : null,
+            record.sourceUrl || ''
+          ]
+        );
+      }
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
+    const [[countResult]] = await this.pool.execute('SELECT COUNT(*) AS total FROM open_records WHERE dataset_id = ?', [datasetId]);
+    return { total: Number(countResult.total || 0) };
+  }
+
+  async seedOpenDataIfEmpty() {
+    const [[openDataCount]] = await this.pool.query('SELECT COUNT(*) AS count FROM open_records');
+    if (Number(openDataCount.count) > 0) {
+      return;
+    }
+
+    const payload = await readOpenDataStore();
+    const normalizedRecords = (Array.isArray(payload.records) ? payload.records : []).map((item) => {
+      const normalized = normalizeOpenDataRecord(item, { username: item?.createdBy || 'open-data-bot' });
+      if (item?.id) {
+        normalized.id = String(item.id);
+      }
+      return normalized;
+    });
+
+    await this.addOpenDataRecords({
+      records: normalizedRecords,
+      title: payload.title,
+      summary: payload.summary,
+      sourceNotes: payload.sourceNotes
+    });
+  }
+
+  async getCoreProjects() {
+    const [projectRows] = await this.pool.query(
+      'SELECT project_id AS projectId, title, summary FROM core_projects ORDER BY project_id ASC'
+    );
+
+    const projects = [];
+    for (const project of projectRows) {
+      const [odsRows] = await this.pool.execute(
+        'SELECT ods FROM core_focus_ods WHERE project_id = ? ORDER BY id ASC',
+        [project.projectId]
+      );
+      const [recordRows] = await this.pool.execute(
+        `SELECT indicator, meta, ods, tipo_dato AS tipoDato, instrumento, valor_ejemplo AS valorEjemplo, unidad, territorio
+         FROM core_records WHERE project_id = ? ORDER BY id ASC`,
+        [project.projectId]
+      );
+      const [pointRows] = await this.pool.execute(
+        `SELECT title, description, site_type AS siteType, category, maslow_level AS maslowLevel,
+                zip_code AS zipCode, ods_goal AS odsGoal, smithsonian_guide AS smithsonianGuide,
+                audience, color, lat, lng, project_name AS projectName, city_name AS cityName
+         FROM core_map_points WHERE project_id = ? ORDER BY id ASC`,
+        [project.projectId]
+      );
+
+      const records = recordRows.map((row) => {
+        let valorEjemplo = row.valorEjemplo;
+        if (typeof valorEjemplo === 'string') {
+          try {
+            valorEjemplo = JSON.parse(valorEjemplo);
+          } catch {}
+        }
+        return {
+          indicator: row.indicator || '',
+          meta: row.meta || '',
+          ods: row.ods || '',
+          tipoDato: row.tipoDato || '',
+          instrumento: row.instrumento || '',
+          valorEjemplo: valorEjemplo ?? null,
+          unidad: row.unidad || '',
+          territorio: row.territorio || ''
+        };
+      });
+
+      const mapPoints = pointRows.map((row) => {
+        let audience = row.audience;
+        if (typeof audience === 'string') {
+          try {
+            audience = JSON.parse(audience);
+          } catch {
+            audience = [];
+          }
+        }
+
+        return {
+          title: row.title || '',
+          description: row.description || '',
+          siteType: row.siteType || '',
+          category: row.category || '',
+          maslowLevel: row.maslowLevel || '',
+          zipCode: row.zipCode || '',
+          odsGoal: row.odsGoal || '',
+          smithsonianGuide: row.smithsonianGuide || '',
+          audience: Array.isArray(audience) ? audience : [],
+          color: row.color || '#2563EB',
+          lat: Number(row.lat || 0),
+          lng: Number(row.lng || 0),
+          projectName: row.projectName || '',
+          cityName: row.cityName || ''
+        };
+      });
+
+      projects.push({
+        projectId: project.projectId,
+        title: project.title,
+        summary: project.summary || '',
+        focusOds: odsRows.map((row) => row.ods),
+        records,
+        mapPoints
+      });
+    }
+
+    return projects;
+  }
+
+  async getCoreProjectById(projectId) {
+    const projects = await this.getCoreProjects();
+    return projects.find((project) => project.projectId === projectId) || null;
+  }
+
+  async seedCoreProjectsIfEmpty() {
+    const [[coreCount]] = await this.pool.query('SELECT COUNT(*) AS count FROM core_projects');
+    if (Number(coreCount.count) > 0) {
+      return;
+    }
+
+    const projects = await readCoreProjectsFromFiles();
+    const connection = await this.pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      for (const project of projects) {
+        await connection.execute(
+          'INSERT INTO core_projects (project_id, title, summary) VALUES (?, ?, ?)',
+          [project.projectId, project.title, project.summary]
+        );
+
+        for (const ods of project.focusOds || []) {
+          await connection.execute(
+            'INSERT INTO core_focus_ods (project_id, ods) VALUES (?, ?)',
+            [project.projectId, ods]
+          );
+        }
+
+        for (const record of project.records || []) {
+          await connection.execute(
+            `INSERT INTO core_records (project_id, indicator, meta, ods, tipo_dato, instrumento, valor_ejemplo, unidad, territorio)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              project.projectId,
+              record.indicator || '',
+              record.meta || '',
+              record.ods || '',
+              record.tipoDato || '',
+              record.instrumento || '',
+              JSON.stringify(record.valorEjemplo ?? null),
+              record.unidad || '',
+              record.territorio || ''
+            ]
+          );
+        }
+
+        for (const point of project.mapPoints || []) {
+          await connection.execute(
+            `INSERT INTO core_map_points (
+              project_id, title, description, site_type, category, maslow_level, zip_code,
+              ods_goal, smithsonian_guide, audience, color, lat, lng, project_name, city_name
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              project.projectId,
+              point.title || '',
+              point.description || '',
+              point.siteType || '',
+              point.category || '',
+              point.maslowLevel || '',
+              point.zipCode || '',
+              point.odsGoal || '',
+              point.smithsonianGuide || '',
+              JSON.stringify(point.audience || []),
+              point.color || '#2563EB',
+              Number.isFinite(Number(point.lat)) ? Number(point.lat) : 0,
+              Number.isFinite(Number(point.lng)) ? Number(point.lng) : 0,
+              point.projectName || '',
+              point.cityName || ''
+            ]
+          );
+        }
+      }
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async getActors() {
+    const [actorRows] = await this.pool.query(
+      'SELECT actor_code AS actor, title FROM actors ORDER BY actor_code ASC'
+    );
+
+    const actors = [];
+    for (const actorRow of actorRows) {
+      const [itemRows] = await this.pool.execute(
+        'SELECT tema, accion, indicador, ods, instrumento FROM actor_items WHERE actor_code = ? ORDER BY id ASC',
+        [actorRow.actor]
+      );
+      actors.push({
+        actor: actorRow.actor,
+        title: actorRow.title,
+        items: itemRows.map((row) => ({
+          tema: row.tema || '',
+          accion: row.accion || '',
+          indicador: row.indicador || '',
+          ods: row.ods || '',
+          instrumento: row.instrumento || ''
+        }))
+      });
+    }
+
+    return actors;
+  }
+
+  async getActorByRole(role) {
+    const actors = await this.getActors();
+    return actors.find((actor) => String(actor.actor).toUpperCase() === String(role).toUpperCase()) || null;
+  }
+
+  async seedActorsIfEmpty() {
+    const [[actorsCount]] = await this.pool.query('SELECT COUNT(*) AS count FROM actors');
+    if (Number(actorsCount.count) > 0) {
+      return;
+    }
+
+    const actors = await readActorsFromFiles();
+    const connection = await this.pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      for (const actor of actors) {
+        await connection.execute(
+          'INSERT INTO actors (actor_code, title) VALUES (?, ?)',
+          [actor.actor, actor.title || actor.actor]
+        );
+
+        for (const item of actor.items || []) {
+          await connection.execute(
+            'INSERT INTO actor_items (actor_code, tema, accion, indicador, ods, instrumento) VALUES (?, ?, ?, ?, ?, ?)',
+            [actor.actor, item.tema || '', item.accion || '', item.indicador || '', item.ods || '', item.instrumento || '']
+          );
+        }
+      }
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async getFramework() {
+    const [projectRows] = await this.pool.query(
+      'SELECT project_key AS projectKey, project_name AS projectName, enfoque FROM framework_projects ORDER BY project_name ASC LIMIT 1'
+    );
+    const projectRow = projectRows[0];
+    if (!projectRow) {
+      return normalizeFrameworkPayload({ project: 'LATAM EN DATOS', justificacion: {}, matrizIndicadores: {} });
+    }
+
+    const [odsRows] = await this.pool.execute(
+      'SELECT ods FROM framework_ods WHERE project_key = ? ORDER BY id ASC',
+      [projectRow.projectKey]
+    );
+    const [metaRows] = await this.pool.execute(
+      'SELECT meta FROM framework_metas WHERE project_key = ? ORDER BY id ASC',
+      [projectRow.projectKey]
+    );
+    const [indicatorRows] = await this.pool.execute(
+      `SELECT block_name AS blockName, indicador, ods, meta, tipo_dato AS tipoDato, instrumento
+       FROM framework_indicators WHERE project_key = ? ORDER BY block_name ASC, order_index ASC`,
+      [projectRow.projectKey]
+    );
+
+    const matrizIndicadores = indicatorRows.reduce((acc, row) => {
+      if (!acc[row.blockName]) {
+        acc[row.blockName] = [];
+      }
+      acc[row.blockName].push({
+        indicador: row.indicador || '',
+        ods: row.ods || '',
+        meta: row.meta || '',
+        tipoDato: row.tipoDato || '',
+        instrumento: row.instrumento || ''
+      });
+      return acc;
+    }, {});
+
+    return {
+      project: projectRow.projectName,
+      justificacion: {
+        odsAlineados: odsRows.map((row) => row.ods),
+        metasPriorizadas: metaRows.map((row) => row.meta),
+        enfoque: projectRow.enfoque || ''
+      },
+      matrizIndicadores
+    };
+  }
+
+  async seedFrameworkIfEmpty() {
+    const [[countRows]] = await this.pool.query('SELECT COUNT(*) AS count FROM framework_projects');
+    if (Number(countRows.count) > 0) {
+      return;
+    }
+
+    const payload = await readFrameworkFromFile();
+    const projectKey = 'latam-en-datos';
+
+    const connection = await this.pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      await connection.execute(
+        'INSERT INTO framework_projects (project_key, project_name, enfoque) VALUES (?, ?, ?)',
+        [projectKey, payload.project, payload.justificacion?.enfoque || '']
+      );
+
+      for (const ods of payload.justificacion?.odsAlineados || []) {
+        await connection.execute(
+          'INSERT INTO framework_ods (project_key, ods) VALUES (?, ?)',
+          [projectKey, ods]
+        );
+      }
+
+      for (const meta of payload.justificacion?.metasPriorizadas || []) {
+        await connection.execute(
+          'INSERT INTO framework_metas (project_key, meta) VALUES (?, ?)',
+          [projectKey, meta]
+        );
+      }
+
+      for (const [blockName, rows] of Object.entries(payload.matrizIndicadores || {})) {
+        for (let index = 0; index < rows.length; index += 1) {
+          const row = rows[index];
+          await connection.execute(
+            `INSERT INTO framework_indicators (
+              project_key, block_name, order_index, indicador, ods, meta, tipo_dato, instrumento
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              projectKey,
+              blockName,
+              index,
+              row.indicador || '',
+              row.ods || '',
+              row.meta || '',
+              row.tipoDato || '',
+              row.instrumento || ''
+            ]
+          );
+        }
+      }
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   async getStorageType() {
@@ -892,6 +1778,83 @@ function normalizeRecord(input, user) {
   };
 }
 
+function normalizeOpenDataRecord(input, user) {
+  const base = normalizeRecord(
+    {
+      ...input,
+      category: input.category || 'OPEN_DATA',
+      sourceFormat: input.sourceFormat || 'OPEN_API',
+      evidenceLevel: input.evidenceLevel || 'FUENTE_OFICIAL'
+    },
+    user || { username: 'open-data-bot' }
+  );
+
+  return {
+    ...base,
+    bloomLevel: String(input.bloomLevel || '').trim() || 'Analizar',
+    officialValue: Number.isFinite(Number(input.officialValue)) ? Number(input.officialValue) : null,
+    officialUnit: String(input.officialUnit || '').trim() || '',
+    officialYear: Number.isFinite(Number(input.officialYear)) ? Number(input.officialYear) : null,
+    sourceUrl: String(input.sourceUrl || '').trim() || ''
+  };
+}
+
+function toOpenDataPoint(record) {
+  return {
+    id: record.id,
+    title: record.title,
+    description: record.description,
+    siteType: record.siteType,
+    country: record.country,
+    region: record.region,
+    city: record.city,
+    community: record.community,
+    schoolName: record.schoolName,
+    indicatorCode: record.indicatorCode,
+    measurementDate: record.measurementDate,
+    evidenceLevel: record.evidenceLevel,
+    sourceInstrument: record.sourceInstrument,
+    category: record.category,
+    maslowLevel: record.maslowLevel,
+    bloomLevel: record.bloomLevel || '',
+    smithsonianGuide: record.smithsonianGuide,
+    color: record.color,
+    lat: Number(record.lat),
+    lng: Number(record.lng),
+    sourceFormat: record.sourceFormat,
+    projectName: record.projectName,
+    createdBy: record.createdBy,
+    createdAt: record.createdAt,
+    officialValue: record.officialValue ?? null,
+    officialUnit: record.officialUnit || '',
+    officialYear: record.officialYear ?? null,
+    sourceUrl: record.sourceUrl || ''
+  };
+}
+
+async function ensureOpenDataStore() {
+  await ensureFile(openDataFile, seedOpenData);
+}
+
+async function readOpenDataStore() {
+  await ensureOpenDataStore();
+  const payload = await readJson(openDataFile);
+  return {
+    datasetId: payload?.datasetId || seedOpenData.datasetId,
+    title: payload?.title || seedOpenData.title,
+    summary: payload?.summary || seedOpenData.summary,
+    generatedAt: payload?.generatedAt || new Date().toISOString(),
+    sourceNotes: Array.isArray(payload?.sourceNotes) ? payload.sourceNotes : [],
+    records: Array.isArray(payload?.records) ? payload.records : [],
+    mapPoints: Array.isArray(payload?.mapPoints) ? payload.mapPoints : []
+  };
+}
+
+async function writeOpenDataStore(payload) {
+  await fs.mkdir(openDataDir, { recursive: true });
+  await writeJson(openDataFile, payload);
+}
+
 function toCsv(records) {
   const headers = [
     'id',
@@ -1122,6 +2085,183 @@ app.get('/api/projects/recent', authenticate, async (_, res) => {
     res.json({ projects: recent });
   } catch (error) {
     res.status(500).json({ message: 'Error consultando proyectos.', detail: error.message });
+  }
+});
+
+app.get('/api/open-data', authenticate, async (req, res) => {
+  try {
+    const payload = await store.getOpenDataPayload();
+    const { country, city, indicatorCode, fromDate, toDate, bloomLevel } = req.query;
+    const filtered = filterRecordsByContext(payload.records, {
+      country,
+      city,
+      indicatorCode,
+      fromDate,
+      toDate
+    }).filter((record) => {
+      if (!bloomLevel) return true;
+      return String(record.bloomLevel || '').toLowerCase() === String(bloomLevel).toLowerCase();
+    });
+
+    return res.json({
+      datasetId: payload.datasetId,
+      title: payload.title,
+      summary: payload.summary,
+      generatedAt: payload.generatedAt,
+      sourceNotes: payload.sourceNotes,
+      count: filtered.length,
+      records: filtered
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error consultando open data.', detail: error.message });
+  }
+});
+
+app.get('/api/open-data/points', authenticate, async (req, res) => {
+  try {
+    const payload = await store.getOpenDataPayload();
+    const { country, city, indicatorCode, fromDate, toDate, bloomLevel } = req.query;
+    const filtered = filterRecordsByContext(payload.records, {
+      country,
+      city,
+      indicatorCode,
+      fromDate,
+      toDate
+    }).filter((record) => {
+      if (!bloomLevel) return true;
+      return String(record.bloomLevel || '').toLowerCase() === String(bloomLevel).toLowerCase();
+    });
+
+    const points = filtered
+      .filter((record) => Number.isFinite(Number(record.lat)) && Number.isFinite(Number(record.lng)))
+      .map((record) => toOpenDataPoint(record));
+
+    return res.json({
+      datasetId: payload.datasetId,
+      title: payload.title,
+      generatedAt: payload.generatedAt,
+      sourceNotes: payload.sourceNotes,
+      count: points.length,
+      points
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error consultando puntos de open data.', detail: error.message });
+  }
+});
+
+app.post('/api/open-data', authenticate, authorize([Roles.ADMIN, Roles.AGENTE_AUTORIZADO]), async (req, res) => {
+  try {
+    const payload = await store.getOpenDataPayload();
+    const inputRecords = Array.isArray(req.body?.records) ? req.body.records : [];
+
+    if (!inputRecords.length) {
+      return res.status(400).json({ message: 'Debes enviar records (array) con al menos un elemento.' });
+    }
+
+    const normalized = [];
+    const rejected = [];
+
+    inputRecords.forEach((item, index) => {
+      const record = normalizeOpenDataRecord(item, req.user);
+      const errors = validateNormalizedRecord(record);
+      if (errors.length) {
+        rejected.push({ index, title: item?.title || 'Sin título', errors });
+        return;
+      }
+      normalized.push(record);
+    });
+
+    if (!normalized.length) {
+      return res.status(400).json({
+        message: 'Ningún registro open data válido para insertar.',
+        inserted: 0,
+        rejectedCount: rejected.length,
+        rejected
+      });
+    }
+
+    const saveResult = await store.addOpenDataRecords({
+      records: normalized,
+      title: req.body?.title || payload.title,
+      summary: req.body?.summary || payload.summary,
+      sourceNotes: Array.isArray(req.body?.sourceNotes) ? req.body.sourceNotes : undefined
+    });
+
+    return res.status(201).json({
+      message: rejected.length ? 'Open data cargado con observaciones.' : 'Open data cargado correctamente.',
+      inserted: normalized.length,
+      rejectedCount: rejected.length,
+      rejected,
+      total: saveResult.total
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error cargando open data.', detail: error.message });
+  }
+});
+
+app.get('/api/core-projects', authenticate, async (_, res) => {
+  try {
+    const projects = await store.getCoreProjects();
+    return res.json({ count: projects.length, projects });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error consultando proyectos CORE.', detail: error.message });
+  }
+});
+
+app.get('/api/core-projects/:projectId', authenticate, async (req, res) => {
+  try {
+    const project = await store.getCoreProjectById(req.params.projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Proyecto CORE no encontrado.' });
+    }
+    return res.json({ project });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error consultando proyecto CORE.', detail: error.message });
+  }
+});
+
+app.get('/api/actors', authenticate, async (req, res) => {
+  try {
+    const actors = await store.getActors();
+    const { role } = req.query;
+
+    if (role) {
+      const actor = actors.find((item) => String(item.actor).toUpperCase() === String(role).toUpperCase());
+      if (!actor) {
+        return res.status(404).json({ message: 'Actor no encontrado.' });
+      }
+      return res.json({ actor });
+    }
+
+    return res.json({ count: actors.length, actors });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error consultando actores.', detail: error.message });
+  }
+});
+
+app.get('/api/framework', authenticate, async (req, res) => {
+  try {
+    const payload = await store.getFramework();
+    const block = String(req.query?.block || '').trim();
+
+    if (!block) {
+      return res.json(payload);
+    }
+
+    const rows = payload?.matrizIndicadores?.[block];
+    if (!Array.isArray(rows)) {
+      return res.status(404).json({ message: 'Bloque no encontrado en matrizIndicadores.' });
+    }
+
+    return res.json({
+      project: payload.project,
+      justificacion: payload.justificacion,
+      block,
+      count: rows.length,
+      indicadores: rows
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error consultando framework.', detail: error.message });
   }
 });
 
@@ -1394,6 +2534,9 @@ async function initStore() {
     store = new JsonStore();
     await store.init();
     console.log('Storage activo: JSON local');
+  }
+  if ((await store.getStorageType()) === 'json') {
+    await ensureOpenDataStore();
   }
 }
 

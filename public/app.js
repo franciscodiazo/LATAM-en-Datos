@@ -83,6 +83,14 @@ const INDICATOR_LABELS = {
   OTHER: 'Otro'
 };
 
+const INDICATOR_CHART_COLORS = {
+  WATER: 'rgba(14, 165, 233, 0.82)',
+  WASTE: 'rgba(245, 158, 11, 0.82)',
+  CONNECTIVITY: 'rgba(139, 92, 246, 0.82)',
+  INFRASTRUCTURE: 'rgba(16, 185, 129, 0.82)',
+  OTHER: 'rgba(100, 116, 139, 0.82)'
+};
+
 const CORE_PROJECT_FILES = [
   '/data-core/core-food.json',
   '/data-core/core-resiliencia-ecosistemica.json',
@@ -435,26 +443,33 @@ function buildCitySummaryMarkers(points) {
 function renderCitySummaryCharts(points) {
   if (!cityInfraChart || !cityPopulationChart || !cityStudentFocusChart) return;
 
-  const cityConfigMap = getCitySummaryConfig();
-  const cityOrder = [
-    { key: 'GINEBRA', cityName: 'Ginebra' },
-    { key: 'GUATEMALA', cityName: 'Ciudad de Guatemala' },
-    { key: 'POSADAS', cityName: 'Posadas' }
-  ];
+  const indicatorKeys = ['WATER', 'WASTE', 'CONNECTIVITY', 'INFRASTRUCTURE', 'OTHER'];
+  const cityOrder = ['Ginebra', 'Ciudad de Guatemala', 'Posadas'];
 
-  const rows = cityOrder
-    .map(({ key, cityName }) => {
-      const config = cityConfigMap[key];
-      if (!config) return null;
-      const cityPoints = points.filter((point) => normalizeCityName(inferCity(point)) === cityName);
-      return {
-        label: cityName,
-        population: Number(config.population || 0),
-        students: Number(config.students || 0),
-        ...summarizeCityPoints(cityPoints)
-      };
-    })
-    .filter(Boolean);
+  const cityRows = cityOrder.map((cityName) => {
+    const cityPoints = points.filter((point) => normalizeCityName(inferCity(point)) === cityName);
+    const byIndicator = indicatorKeys.reduce((acc, key) => {
+      acc[key] = cityPoints.filter((point) => inferIndicatorCode(point) === key).length;
+      return acc;
+    }, {});
+
+    return {
+      label: cityName,
+      byIndicator,
+      total: cityPoints.length
+    };
+  });
+
+  const globalByIndicator = indicatorKeys.reduce((acc, key) => {
+    acc[key] = points.filter((point) => inferIndicatorCode(point) === key).length;
+    return acc;
+  }, {});
+
+  const studentPoints = points.filter((point) => Array.isArray(point.audience) && point.audience.includes('ESTUDIANTE'));
+  const studentByIndicator = indicatorKeys.reduce((acc, key) => {
+    acc[key] = studentPoints.filter((point) => inferIndicatorCode(point) === key).length;
+    return acc;
+  }, {});
 
   if (state.charts.cityInfra) state.charts.cityInfra.destroy();
   if (state.charts.cityPopulation) state.charts.cityPopulation.destroy();
@@ -463,12 +478,13 @@ function renderCitySummaryCharts(points) {
   state.charts.cityInfra = new Chart(cityInfraChart, {
     type: 'bar',
     data: {
-      labels: rows.map((row) => row.label),
-      datasets: [
-        { label: 'Centros médicos/hospitales', data: rows.map((row) => row.medical), backgroundColor: 'rgba(239, 68, 68, 0.75)', borderRadius: 8 },
-        { label: 'Escuelas/colegios', data: rows.map((row) => row.schools), backgroundColor: 'rgba(59, 130, 246, 0.75)', borderRadius: 8 },
-        { label: 'Estaciones de policía', data: rows.map((row) => row.police), backgroundColor: 'rgba(245, 158, 11, 0.75)', borderRadius: 8 }
-      ]
+      labels: cityRows.map((row) => row.label),
+      datasets: indicatorKeys.map((key) => ({
+        label: formatIndicatorLabel(key),
+        data: cityRows.map((row) => row.byIndicator[key]),
+        backgroundColor: INDICATOR_CHART_COLORS[key],
+        borderRadius: 8
+      }))
     },
     options: {
       responsive: true,
@@ -479,38 +495,31 @@ function renderCitySummaryCharts(points) {
   });
 
   state.charts.cityPopulation = new Chart(cityPopulationChart, {
-    type: 'bar',
+    type: 'doughnut',
     data: {
-      labels: rows.map((row) => row.label),
-      datasets: [
-        { label: 'Población estimada', data: rows.map((row) => row.population), backgroundColor: 'rgba(99, 102, 241, 0.72)', borderRadius: 8 },
-        { label: 'Estudiantes estimados', data: rows.map((row) => row.students), backgroundColor: 'rgba(16, 185, 129, 0.72)', borderRadius: 8 }
-      ]
+      labels: indicatorKeys.map((key) => formatIndicatorLabel(key)),
+      datasets: [{
+        label: 'Distribución global',
+        data: indicatorKeys.map((key) => globalByIndicator[key]),
+        backgroundColor: indicatorKeys.map((key) => INDICATOR_CHART_COLORS[key])
+      }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: (value) => Number(value).toLocaleString('es-CO')
-          }
-        }
-      }
+      plugins: { legend: { position: 'bottom' } }
     }
   });
 
   state.charts.cityStudentFocus = new Chart(cityStudentFocusChart, {
     type: 'bar',
     data: {
-      labels: rows.map((row) => row.label),
+      labels: indicatorKeys.map((key) => formatIndicatorLabel(key)),
       datasets: [
         {
-          label: 'Registros con enfoque estudiantil',
-          data: rows.map((row) => row.studentRelated),
-          backgroundColor: 'rgba(14, 165, 233, 0.78)',
+          label: 'Registros estudiantiles por indicador',
+          data: indicatorKeys.map((key) => studentByIndicator[key]),
+          backgroundColor: indicatorKeys.map((key) => INDICATOR_CHART_COLORS[key]),
           borderRadius: 8
         }
       ]

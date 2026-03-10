@@ -342,15 +342,27 @@ function renderDashboardMapPoints(points, options = {}) {
   state.dashboardMarkersLayer.clearLayers();
   const markerSize = Math.max(14, Math.round(markerSizeForZoom(state.dashboardMap.getZoom()) * 0.72));
 
-  points.forEach((point) => {
-    const color = point.color || (MASLOW_COLORS[point.maslowLevel] || '#4f46e5');
-    L.marker([point.lat, point.lng], { icon: buildPinIcon(color, markerSize) })
-      .bindPopup(`<strong>${point.title}</strong><br><small>${point.category || 'Dato'} • ${point.maslowLevel || 'N/A'}</small>`)
+  const summaryMarkers = buildCitySummaryMarkers(points);
+  const summaryCities = new Set(summaryMarkers.map((marker) => marker.cityName));
+  const detailPoints = points.filter((point) => !summaryCities.has(normalizeCityName(inferCity(point))));
+
+  summaryMarkers.forEach((marker) => {
+    const icon = buildPinIcon('#0f766e', markerSize + 3);
+    L.marker([marker.lat, marker.lng], { icon })
+      .bindPopup(marker.popupHtml, { className: 'custom-popup rounded-2xl' })
       .addTo(state.dashboardMarkersLayer);
   });
 
-  if (fitBounds && points.length > 0) {
-    const bounds = L.latLngBounds(points.map((point) => [point.lat, point.lng]));
+  detailPoints.forEach((point) => {
+    const color = point.color || (MASLOW_COLORS[point.maslowLevel] || '#4f46e5');
+    L.marker([point.lat, point.lng], { icon: buildPinIcon(color, markerSize) })
+      .bindPopup(`<strong>${point.title}</strong><br><small>${point.category || 'Dato'} • ${point.maslowLevel || 'N/A'}</small>`, { className: 'custom-popup rounded-2xl' })
+      .addTo(state.dashboardMarkersLayer);
+  });
+
+  const pointsForBounds = [...detailPoints, ...summaryMarkers];
+  if (fitBounds && pointsForBounds.length > 0) {
+    const bounds = L.latLngBounds(pointsForBounds.map((point) => [point.lat, point.lng]));
     state.dashboardMap.fitBounds(bounds, { padding: [20, 20], maxZoom: 10 });
   } else if (fitBounds) {
     state.dashboardMap.setView([4.5709, -74.2973], 4);

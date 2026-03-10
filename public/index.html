@@ -367,7 +367,7 @@
             </div>
           </div>
 
-          <div class="bento-card bg-white flex-1 p-3 flex flex-col gap-3 relative shadow-floating overflow-hidden">
+          <div id="mapViewportCard" class="bento-card bg-white flex-1 p-3 flex flex-col gap-3 relative shadow-floating overflow-hidden">
 
             <!-- Map Tools Ribbon -->
             <div
@@ -394,6 +394,12 @@
               </div>
 
               <div class="flex items-center gap-2">
+                <button id="mapCompactBtn"
+                  class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm text-slate-600">Burbuja
+                  compacta</button>
+                <button id="mapFullscreenBtn"
+                  class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm text-slate-600">Pantalla
+                  completa</button>
                 <button id="clearCityBtn"
                   class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm text-slate-600">Vaciar</button>
                 <button id="fitAllBtn"

@@ -28,6 +28,7 @@ const state = {
   activeCityFilter: 'ALL',
   activeIndicatorFilter: 'ALL',
   activeMaslowFilter: 'ALL',
+  compactBubbles: false,
   charts: {
     maslowRadar: null,
     categoryBar: null,
@@ -53,6 +54,9 @@ const adminUsersTable = document.getElementById('adminUsersTable');
 const adminUsersMsg = document.getElementById('adminUsersMsg');
 const colorFilterBar = document.getElementById('colorFilterBar');
 const fitAllBtn = document.getElementById('fitAllBtn');
+const mapCompactBtn = document.getElementById('mapCompactBtn');
+const mapFullscreenBtn = document.getElementById('mapFullscreenBtn');
+const mapViewportCard = document.getElementById('mapViewportCard');
 const mapStatsCards = document.getElementById('mapStatsCards');
 const regionFilterBar = document.getElementById('regionFilterBar');
 const cityFilterSelect = document.getElementById('cityFilterSelect');
@@ -342,12 +346,13 @@ function renderDashboardMapPoints(points, options = {}) {
   state.dashboardMarkersLayer.clearLayers();
   const markerSize = Math.max(14, Math.round(markerSizeForZoom(state.dashboardMap.getZoom()) * 0.72));
 
-  const summaryMarkers = buildCitySummaryMarkers(points);
+  const summaryMarkers = buildCitySummaryMarkers(points, { compact: state.compactBubbles });
   const summaryCities = new Set(summaryMarkers.map((marker) => marker.cityName));
   const detailPoints = points.filter((point) => !summaryCities.has(normalizeCityName(inferCity(point))));
 
   summaryMarkers.forEach((marker) => {
-    const icon = buildPinIcon('#0f766e', markerSize + 3);
+    const summarySize = state.compactBubbles ? markerSize : markerSize + 3;
+    const icon = buildPinIcon('#0f766e', summarySize);
     L.marker([marker.lat, marker.lng], { icon })
       .bindPopup(marker.popupHtml, { className: 'custom-popup rounded-2xl' })
       .addTo(state.dashboardMarkersLayer);
@@ -430,7 +435,8 @@ function summarizeCityPoints(points) {
   };
 }
 
-function buildCitySummaryPopup(cityConfig, points) {
+function buildCitySummaryPopup(cityConfig, points, options = {}) {
+  const { compact = false } = options;
   const summary = summarizeCityPoints(points);
   const other = Math.max(0, summary.total - summary.medical - summary.schools - summary.police);
   const safeTotal = Math.max(1, summary.total);
@@ -450,7 +456,7 @@ function buildCitySummaryPopup(cityConfig, points) {
   const donutStyle = `background: conic-gradient(#0ea5e9 0% ${seg1}%, #10b981 ${seg1}% ${seg2}%, #ec4899 ${seg2}% ${seg3}%, #64748b ${seg3}% 100%);`;
 
   return `
-    <div class="city-bubble-card">
+    <div class="city-bubble-card ${compact ? 'city-bubble-compact' : ''}">
       <div class="city-bubble-header">
         <div>
           <p class="city-bubble-kicker">Radar territorial</p>
@@ -510,7 +516,8 @@ function buildCitySummaryPopup(cityConfig, points) {
   `;
 }
 
-function buildCitySummaryMarkers(points) {
+function buildCitySummaryMarkers(points, options = {}) {
+  const { compact = false } = options;
   const grouped = points.reduce((acc, point) => {
     const city = normalizeCityName(inferCity(point));
     if (!CITY_KEY_BY_NAME[city]) return acc;
@@ -530,7 +537,7 @@ function buildCitySummaryMarkers(points) {
       points: cityPoints,
       lat: cityConfig.lat,
       lng: cityConfig.lng,
-      popupHtml: buildCitySummaryPopup(cityConfig, cityPoints)
+      popupHtml: buildCitySummaryPopup(cityConfig, cityPoints, { compact })
     };
   }).filter(Boolean);
 }
@@ -764,12 +771,13 @@ function renderPoints(points, options = {}) {
   state.markersLayer.clearLayers();
   const markerSize = markerSizeForZoom(state.map.getZoom());
 
-  const summaryMarkers = buildCitySummaryMarkers(points);
+  const summaryMarkers = buildCitySummaryMarkers(points, { compact: state.compactBubbles });
   const summaryCities = new Set(summaryMarkers.map((marker) => marker.cityName));
   const detailPoints = points.filter((point) => !summaryCities.has(normalizeCityName(inferCity(point))));
 
   summaryMarkers.forEach((marker) => {
-    const icon = buildPinIcon('#0f766e', markerSize + 4);
+    const summarySize = state.compactBubbles ? markerSize : markerSize + 4;
+    const icon = buildPinIcon('#0f766e', summarySize);
     L.marker([marker.lat, marker.lng], { icon })
       .bindPopup(marker.popupHtml, { className: 'custom-popup rounded-2xl' })
       .addTo(state.markersLayer);
@@ -1301,6 +1309,28 @@ async function loadEducationalActorsData() {
   renderActorItems('researchData', researchers);
 }
 
+function updateMapActionButtons() {
+  if (mapCompactBtn) {
+    mapCompactBtn.classList.toggle('map-action-active', state.compactBubbles);
+    mapCompactBtn.textContent = state.compactBubbles ? 'Burbuja normal' : 'Burbuja compacta';
+  }
+
+  if (mapFullscreenBtn) {
+    const isFullscreen = document.fullscreenElement === mapViewportCard;
+    mapFullscreenBtn.textContent = isFullscreen ? 'Salir pantalla completa' : 'Pantalla completa';
+    mapFullscreenBtn.classList.toggle('map-action-active', isFullscreen);
+  }
+}
+
+async function toggleMapFullscreen() {
+  if (!mapViewportCard) return;
+  if (document.fullscreenElement === mapViewportCard) {
+    await document.exitFullscreen();
+  } else {
+    await mapViewportCard.requestFullscreen();
+  }
+}
+
 
 // UI BINDINGS
 const usernameInput = document.getElementById('username');
@@ -1398,6 +1428,32 @@ if (fitAllBtn) {
     refreshMapView();
   });
 }
+
+if (mapCompactBtn) {
+  mapCompactBtn.addEventListener('click', () => {
+    state.compactBubbles = !state.compactBubbles;
+    updateMapActionButtons();
+    refreshMapView();
+  });
+}
+
+if (mapFullscreenBtn) {
+  mapFullscreenBtn.addEventListener('click', async () => {
+    try {
+      await toggleMapFullscreen();
+      setTimeout(() => {
+        state.map?.invalidateSize();
+      }, 180);
+    } catch (error) {
+      console.error('No se pudo cambiar a pantalla completa:', error);
+    }
+  });
+}
+
+document.addEventListener('fullscreenchange', () => {
+  updateMapActionButtons();
+  setTimeout(() => state.map?.invalidateSize(), 180);
+});
 
 if (openGlobalMapBtn) {
   openGlobalMapBtn.addEventListener('click', () => {
@@ -1563,6 +1619,8 @@ if (PUBLIC_MAP_MODE) {
     console.error('Error cargando modo público:', error);
   });
 }
+
+updateMapActionButtons();
 
 function initializePublicLandingMap() {
   if (!publicLandingMapElement || state.publicLandingMap) return;

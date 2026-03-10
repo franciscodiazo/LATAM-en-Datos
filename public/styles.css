@@ -475,6 +475,64 @@ body {
   color: #0f172a;
 }
 
+.city-bubble-card.city-bubble-compact {
+  width: min(235px, 68vw);
+  padding: 10px;
+}
+
+.city-bubble-card.city-bubble-compact .city-bubble-header {
+  margin-bottom: 8px;
+}
+
+.city-bubble-card.city-bubble-compact .city-bubble-header h4 {
+  font-size: 19px;
+}
+
+.city-bubble-card.city-bubble-compact .city-bubble-main {
+  grid-template-columns: 60px 1fr;
+  margin-bottom: 8px;
+}
+
+.city-bubble-card.city-bubble-compact .city-bubble-donut {
+  width: 60px;
+  height: 60px;
+}
+
+.city-bubble-card.city-bubble-compact .city-bubble-donut::before {
+  inset: 12px;
+}
+
+.city-bubble-card.city-bubble-compact .city-bubble-donut-center {
+  font-size: 14px;
+}
+
+.city-bubble-card.city-bubble-compact .city-bubble-value {
+  font-size: 22px;
+}
+
+.city-bubble-card.city-bubble-compact .city-bubble-name,
+.city-bubble-card.city-bubble-compact .city-bubble-count,
+.city-bubble-card.city-bubble-compact .city-bubble-pct {
+  font-size: 10px;
+}
+
+.map-action-active {
+  background: #eef2ff !important;
+  border-color: #c7d2fe !important;
+  color: #4f46e5 !important;
+}
+
+#mapViewportCard:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  padding: 12px;
+}
+
+#mapViewportCard:fullscreen #map {
+  min-height: calc(100vh - 150px);
+}
+
 @media (max-width: 640px) {
   .custom-popup .leaflet-popup-content-wrapper {
     border-radius: 14px;

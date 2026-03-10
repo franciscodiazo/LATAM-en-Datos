@@ -420,21 +420,79 @@ function summarizeCityPoints(points) {
 
 function buildCitySummaryPopup(cityConfig, points) {
   const summary = summarizeCityPoints(points);
+  const other = Math.max(0, summary.total - summary.medical - summary.schools - summary.police);
+  const safeTotal = Math.max(1, summary.total);
+
+  const pctMedical = Math.round((summary.medical / safeTotal) * 100);
+  const pctSchools = Math.round((summary.schools / safeTotal) * 100);
+  const pctPolice = Math.round((summary.police / safeTotal) * 100);
+  const pctOther = Math.max(0, 100 - pctMedical - pctSchools - pctPolice);
+  const studentPct = Math.round((summary.studentRelated / safeTotal) * 100);
+  const perThousand = cityConfig.population
+    ? ((summary.total / cityConfig.population) * 1000).toFixed(2)
+    : '0.00';
+
+  const seg1 = pctMedical;
+  const seg2 = seg1 + pctSchools;
+  const seg3 = seg2 + pctPolice;
+  const donutStyle = `background: conic-gradient(#0ea5e9 0% ${seg1}%, #10b981 ${seg1}% ${seg2}%, #ec4899 ${seg2}% ${seg3}%, #64748b ${seg3}% 100%);`;
 
   return `
-    <div class="p-1 font-sans min-w-[250px]">
-      <h4 class="font-extrabold text-slate-900 border-b pb-1 mb-2">${cityConfig.city}, ${cityConfig.region}</h4>
-      <p class="text-xs text-slate-500 mb-2">${cityConfig.country} · Vista consolidada territorial</p>
-      <div class="grid grid-cols-2 gap-2 text-xs">
-        <div class="bg-slate-50 rounded p-2"><span class="text-slate-500">Centros médicos / hospitales</span><p class="font-extrabold text-slate-800">${summary.medical}</p></div>
-        <div class="bg-slate-50 rounded p-2"><span class="text-slate-500">Escuelas / colegios</span><p class="font-extrabold text-slate-800">${summary.schools}</p></div>
-        <div class="bg-slate-50 rounded p-2"><span class="text-slate-500">Estaciones de policía</span><p class="font-extrabold text-slate-800">${summary.police}</p></div>
-        <div class="bg-slate-50 rounded p-2"><span class="text-slate-500">Registros analizados</span><p class="font-extrabold text-slate-800">${summary.total}</p></div>
+    <div class="city-bubble-card">
+      <div class="city-bubble-header">
+        <div>
+          <p class="city-bubble-kicker">Radar territorial</p>
+          <h4>${cityConfig.city}</h4>
+        </div>
+        <span class="city-bubble-chip">${cityConfig.region}</span>
       </div>
-      <div class="mt-2 text-xs bg-indigo-50 border border-indigo-100 rounded p-2">
-        <p><strong>Población estimada:</strong> ${cityConfig.population.toLocaleString('es-CO')}</p>
-        <p><strong>Estudiantes estimados:</strong> ${cityConfig.students.toLocaleString('es-CO')}</p>
-        <p><strong>Registros con enfoque estudiantil:</strong> ${summary.studentRelated}</p>
+
+      <div class="city-bubble-main">
+        <div class="city-bubble-donut" style="${donutStyle}">
+          <div class="city-bubble-donut-center">${summary.total}</div>
+        </div>
+        <div class="city-bubble-stats">
+          <p class="city-bubble-label">Registros por 1000 hab.</p>
+          <p class="city-bubble-value">${perThousand}</p>
+          <p class="city-bubble-sub">Población: ${cityConfig.population.toLocaleString('es-CO')}</p>
+          <p class="city-bubble-sub">Estudiantes: ${cityConfig.students.toLocaleString('es-CO')}</p>
+        </div>
+      </div>
+
+      <div class="city-bubble-rows">
+        <div class="city-bubble-row">
+          <span class="city-bubble-dot dot-medical"></span>
+          <span class="city-bubble-name">Centros médicos</span>
+          <span class="city-bubble-count">${summary.medical}</span>
+          <span class="city-bubble-pct">${pctMedical}%</span>
+          <div class="city-bubble-bar"><i style="width:${pctMedical}%" class="bar-medical"></i></div>
+        </div>
+        <div class="city-bubble-row">
+          <span class="city-bubble-dot dot-school"></span>
+          <span class="city-bubble-name">Escuelas</span>
+          <span class="city-bubble-count">${summary.schools}</span>
+          <span class="city-bubble-pct">${pctSchools}%</span>
+          <div class="city-bubble-bar"><i style="width:${pctSchools}%" class="bar-school"></i></div>
+        </div>
+        <div class="city-bubble-row">
+          <span class="city-bubble-dot dot-police"></span>
+          <span class="city-bubble-name">Policía</span>
+          <span class="city-bubble-count">${summary.police}</span>
+          <span class="city-bubble-pct">${pctPolice}%</span>
+          <div class="city-bubble-bar"><i style="width:${pctPolice}%" class="bar-police"></i></div>
+        </div>
+        <div class="city-bubble-row">
+          <span class="city-bubble-dot dot-other"></span>
+          <span class="city-bubble-name">Otros</span>
+          <span class="city-bubble-count">${other}</span>
+          <span class="city-bubble-pct">${pctOther}%</span>
+          <div class="city-bubble-bar"><i style="width:${pctOther}%" class="bar-other"></i></div>
+        </div>
+      </div>
+
+      <div class="city-bubble-footer">
+        <span>Enfoque estudiantil</span>
+        <strong>${summary.studentRelated} (${studentPct}%)</strong>
       </div>
     </div>
   `;

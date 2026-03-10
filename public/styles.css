@@ -294,7 +294,7 @@ body {
 }
 
 .city-bubble-card {
-  width: 285px;
+  width: min(285px, 72vw);
   padding: 12px;
   background: #f8fafc;
   border-radius: 16px;
@@ -473,4 +473,99 @@ body {
 .city-bubble-footer strong {
   font-size: 12px;
   color: #0f172a;
+}
+
+@media (max-width: 640px) {
+  .custom-popup .leaflet-popup-content-wrapper {
+    border-radius: 14px;
+  }
+
+  .city-bubble-card {
+    width: min(245px, 78vw);
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .city-bubble-header {
+    margin-bottom: 8px;
+  }
+
+  .city-bubble-kicker {
+    font-size: 9px;
+  }
+
+  .city-bubble-header h4 {
+    font-size: 18px;
+  }
+
+  .city-bubble-chip {
+    font-size: 9px;
+    padding: 3px 7px;
+  }
+
+  .city-bubble-main {
+    grid-template-columns: 58px 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .city-bubble-donut {
+    width: 58px;
+    height: 58px;
+  }
+
+  .city-bubble-donut::before {
+    inset: 11px;
+  }
+
+  .city-bubble-donut-center {
+    font-size: 14px;
+  }
+
+  .city-bubble-label {
+    font-size: 9px;
+  }
+
+  .city-bubble-value {
+    font-size: 22px;
+  }
+
+  .city-bubble-sub {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .city-bubble-rows {
+    gap: 6px;
+  }
+
+  .city-bubble-row {
+    grid-template-columns: 7px 1fr auto auto;
+    gap: 5px;
+  }
+
+  .city-bubble-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .city-bubble-name,
+  .city-bubble-count,
+  .city-bubble-pct {
+    font-size: 10px;
+  }
+
+  .city-bubble-bar {
+    height: 5px;
+  }
+
+  .city-bubble-footer {
+    margin-top: 6px;
+    padding-top: 6px;
+    font-size: 10px;
+  }
+
+  .city-bubble-footer strong {
+    font-size: 11px;
+  }
 }

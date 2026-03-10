@@ -114,7 +114,8 @@ const CITY_KEY_BY_NAME = {
   Posadas: 'POSADAS'
 };
 const COMPARATIVE_CITIES = ['Ginebra', 'Ciudad de Guatemala', 'Posadas'];
-const PUBLIC_MAP_MODE = new URLSearchParams(window.location.search).get('public') === 'map';
+const URL_PARAMS = new URLSearchParams(window.location.search);
+const PUBLIC_MAP_MODE = URL_PARAMS.get('public') === 'map' || (!state.token && URL_PARAMS.get('login') !== '1');
 
 // SECTIONS
 const sectionIds = ['dashboard', 'mapa', 'comparador', 'maslow', 'embajadores', 'comunidad', 'proyectos', 'carga'];
@@ -1419,12 +1420,6 @@ function enablePublicReadOnlyMode() {
   adminUsersPanel.classList.add('hidden');
   uploadNav.classList.add('hidden');
   document.getElementById('divider-admin')?.classList.add('hidden');
-
-  document.querySelectorAll('.nav-item').forEach((button) => {
-    if (button.dataset.section !== 'mapa') {
-      button.classList.add('hidden');
-    }
-  });
 }
 
 async function loadPublicMapData() {

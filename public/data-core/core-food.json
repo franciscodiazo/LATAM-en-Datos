@@ -42,7 +42,7 @@
       "instrumento": "Mapeo comunitario + encuesta",
       "valorEjemplo": 5,
       "unidad": "fuentes activas",
-      "territorio": "Bariloche"
+      "territorio": "Posadas, Misiones"
     },
     {
       "indicator": "Acceso continuo a alimentos en crisis",
@@ -104,15 +104,15 @@
       "siteType": "Mercado",
       "category": "FOOD",
       "maslowLevel": "Fisiológicas",
-      "zipCode": "8400",
+      "zipCode": "3300",
       "odsGoal": "ODS 12",
       "smithsonianGuide": "Alimentación",
       "audience": ["ESTUDIANTE", "DOCENTE"],
       "color": "#84CC16",
-      "lat": -41.1332,
-      "lng": -71.3103,
+      "lat": -27.424592,
+      "lng": -55.934723,
       "projectName": "Core FOOD",
-      "cityName": "Bariloche"
+      "cityName": "Posadas"
     },
     {
       "title": "Percepción de seguridad alimentaria",

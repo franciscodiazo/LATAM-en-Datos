@@ -44,6 +44,7 @@ const loginForm = document.getElementById('loginForm');
 const loginError = document.getElementById('loginError');
 const userBadge = document.getElementById('userBadge');
 const logoutBtn = document.getElementById('logoutBtn');
+const publicLoginNav = document.getElementById('publicLoginNav');
 const uploadNav = document.getElementById('uploadNav');
 const adminUsersPanel = document.getElementById('adminUsersPanel');
 const adminCreateUserForm = document.getElementById('adminCreateUserForm');
@@ -117,6 +118,15 @@ const COMPARATIVE_CITIES = ['Ginebra', 'Ciudad de Guatemala', 'Posadas'];
 const URL_PARAMS = new URLSearchParams(window.location.search);
 const PUBLIC_MAP_MODE = URL_PARAMS.get('public') === 'map' || (!state.token && URL_PARAMS.get('login') !== '1');
 
+function isStudyCity(cityName) {
+  return COMPARATIVE_CITIES.includes(normalizeCityName(cityName));
+}
+
+function limitToStudyCities(points = []) {
+  if (!PUBLIC_MAP_MODE) return points;
+  return points.filter((point) => isStudyCity(inferCity(point)));
+}
+
 // SECTIONS
 const sectionIds = ['dashboard', 'mapa', 'comparador', 'maslow', 'embajadores', 'comunidad', 'proyectos', 'carga'];
 
@@ -124,7 +134,7 @@ const sectionIds = ['dashboard', 'mapa', 'comparador', 'maslow', 'embajadores', 
 const REGION_PRESETS = {
   GINEBRA: { label: 'Ginebra (Valle del Cauca)', bounds: { minLat: 3.69, maxLat: 3.74, minLng: -76.28, maxLng: -76.25 } },
   GUATEMALA: { label: 'Ciudad de Guatemala (Guatemala)', bounds: { minLat: 14.53, maxLat: 14.74, minLng: -90.65, maxLng: -90.43 } },
-  ARGENTINA: { label: 'Posadas (Misiones, Argentina)', bounds: { minLat: -27.52, maxLat: -27.30, minLng: -55.99, maxLng: -55.83 } },
+  ARGENTINA: { label: 'Posadas (Misiones, Argentina)', bounds: { minLat: -27.49, maxLat: -27.36, minLng: -56.02, maxLng: -55.86 } },
   ALL: { label: 'Latam Global', bounds: null }
 };
 
@@ -151,8 +161,8 @@ const DEFAULT_CITY_SUMMARY_CONFIG = {
     city: 'Posadas',
     country: 'Argentina',
     region: 'Misiones',
-    lat: -27.3671,
-    lng: -55.8961,
+    lat: -27.424592,
+    lng: -55.934723,
     population: 360000,
     students: 78000
   }
@@ -624,7 +634,7 @@ function renderCompareActiveChips() {
 
 function renderCityFilterOptions(pointsByRegion) {
   if (!cityFilterSelect) return;
-  const citySet = new Set(pointsByRegion.map(p => inferCity(p)));
+  const citySet = new Set(limitToStudyCities(pointsByRegion).map((p) => inferCity(p)));
   const options = ['<option value="ALL">Todas las ciudades</option>'];
   [...citySet].sort((a, b) => a.localeCompare(b)).forEach(city => {
     options.push(`<option value="${city}" ${city === state.activeCityFilter ? 'selected' : ''}>${city}</option>`);
@@ -985,6 +995,36 @@ function renderRecentProjects(projects = []) {
   `).join('');
 }
 
+function buildPublicDashboardData(points = []) {
+  const scopedPoints = limitToStudyCities(points);
+
+  const byMaslow = scopedPoints.reduce((acc, point) => {
+    const key = point.maslowLevel || 'Sin clasificar';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const byCategory = scopedPoints.reduce((acc, point) => {
+    const key = point.category || 'Sin categoría';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const projectNames = new Set(
+    scopedPoints
+      .map((point) => String(point.projectName || point.project || '').trim())
+      .filter(Boolean)
+  );
+
+  return {
+    totalRecords: scopedPoints.length,
+    mappedRecords: scopedPoints.length,
+    totalProjects: projectNames.size,
+    byMaslow,
+    byCategory
+  };
+}
+
 async function fetchPublicJson(path) {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`No se pudo cargar ${path}`);
@@ -1070,11 +1110,11 @@ function applyMapDataset(datasetId = 'platform') {
   state.activeMaslowFilter = 'ALL';
 
   if (datasetId === 'platform') {
-    state.mapPoints = state.platformMapPoints;
+    state.mapPoints = limitToStudyCities(state.platformMapPoints);
   } else if (datasetId === 'official-open-data') {
-    state.mapPoints = state.officialOpenData.points;
+    state.mapPoints = limitToStudyCities(state.officialOpenData.points);
   } else {
-    state.mapPoints = getCoreDatasetPoints(datasetId);
+    state.mapPoints = limitToStudyCities(getCoreDatasetPoints(datasetId));
   }
 
   if (mapDatasetSelect) mapDatasetSelect.value = datasetId;
@@ -1301,6 +1341,12 @@ if (mapDatasetSelect) {
   });
 }
 
+if (publicLoginNav) {
+  publicLoginNav.addEventListener('click', () => {
+    window.location.href = `${window.location.pathname}?login=1`;
+  });
+}
+
 if (loadDatasetToTextareaBtn) {
   loadDatasetToTextareaBtn.addEventListener('click', async () => {
     const targetPath = ingestionDatasetSelect?.value;
@@ -1417,6 +1463,7 @@ function enablePublicReadOnlyMode() {
   appView.classList.remove('hidden');
   userBadge.textContent = 'Acceso público · solo lectura';
   logoutBtn.classList.add('hidden');
+  publicLoginNav?.classList.remove('hidden');
   adminUsersPanel.classList.add('hidden');
   uploadNav.classList.add('hidden');
   document.getElementById('divider-admin')?.classList.add('hidden');
@@ -1426,6 +1473,10 @@ async function loadPublicMapData() {
   const mapData = await apiGetPublic('/api/public/map/points');
   state.platformMapPoints = mapData.points || [];
 
+  const publicDashboard = buildPublicDashboardData(state.platformMapPoints);
+  renderDashboard(publicDashboard);
+  renderRecentProjects([]);
+
   await Promise.allSettled([
     loadOfficialOpenDataPoints(),
     loadCitySummaryConfig(),
@@ -1433,7 +1484,7 @@ async function loadPublicMapData() {
   ]);
 
   applyMapDataset('platform');
-  setActiveSection('mapa');
+  setActiveSection('dashboard');
 }
 
 if (PUBLIC_MAP_MODE) {

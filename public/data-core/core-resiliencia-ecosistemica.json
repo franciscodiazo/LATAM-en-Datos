@@ -106,19 +106,19 @@
     },
     {
       "title": "Estrategia local de adaptación hídrica",
-      "description": "Manejo comunitario del agua y drenaje en contexto de montaña.",
+      "description": "Manejo comunitario del agua y drenaje en contexto urbano de Posadas.",
       "siteType": "Infraestructura verde",
       "category": "SMITHSONIAN",
       "maslowLevel": "Seguridad",
-      "zipCode": "8400",
+      "zipCode": "3300",
       "odsGoal": "ODS 13",
       "smithsonianGuide": "Resiliencia",
       "audience": ["DOCENTE", "INVESTIGADOR"],
       "color": "#38BDF8",
-      "lat": -41.1363,
-      "lng": -71.3048,
+      "lat": -27.4203,
+      "lng": -55.9392,
       "projectName": "Core ECO",
-      "cityName": "Bariloche"
+      "cityName": "Posadas"
     }
   ]
 }

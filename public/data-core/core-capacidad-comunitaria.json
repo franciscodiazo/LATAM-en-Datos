@@ -42,7 +42,7 @@
       "instrumento": "Encuesta",
       "valorEjemplo": 63,
       "unidad": "% percepción favorable",
-      "territorio": "Bariloche"
+      "territorio": "Posadas, Misiones"
     },
     {
       "indicator": "Acceso a información confiable nutrición/ambiente",
@@ -106,19 +106,19 @@
     },
     {
       "title": "Preparación percibida ante crisis",
-      "description": "Percepción de preparación comunitaria para crisis climática/alimentaria.",
+      "description": "Percepción de preparación comunitaria para crisis climática y alimentaria.",
       "siteType": "Zona escolar",
       "category": "CAPACIDAD",
       "maslowLevel": "Seguridad",
-      "zipCode": "8400",
+      "zipCode": "3300",
       "odsGoal": "ODS 13",
       "smithsonianGuide": "Resiliencia",
       "audience": ["DOCENTE", "INVESTIGADOR"],
       "color": "#6366F1",
-      "lat": -41.1341,
-      "lng": -71.3083,
+      "lat": -27.4278,
+      "lng": -55.9314,
       "projectName": "Core ADAPT",
-      "cityName": "Bariloche"
+      "cityName": "Posadas"
     }
   ]
 }

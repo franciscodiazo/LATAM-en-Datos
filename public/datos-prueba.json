@@ -83,8 +83,8 @@
         "title": "Centro Cívico Posadas",
         "category": "MASLOW",
         "maslowLevel": "Afiliación",
-        "lat": -27.366,
-        "lng": -55.900,
+        "lat": -27.424592,
+        "lng": -55.934723,
         "color": "#f59e0b",
         "cityName": "Posadas",
         "description": "Centro comunitario y cultural urbano."
@@ -93,8 +93,8 @@
         "title": "Hospital Zonal",
         "category": "MASLOW",
         "maslowLevel": "Seguridad",
-        "lat": -27.374,
-        "lng": -55.894,
+        "lat": -27.4278,
+        "lng": -55.9314,
         "color": "#ec4899",
         "cityName": "Posadas",
         "description": "Salud local."
@@ -103,8 +103,8 @@
         "title": "Costanera de Posadas",
         "category": "MASLOW",
         "maslowLevel": "Reconocimiento",
-        "lat": -27.360,
-        "lng": -55.889,
+        "lat": -27.4203,
+        "lng": -55.9392,
         "color": "#0ea5e9",
         "cityName": "Posadas",
         "description": "Nodo turístico y de integración regional."
@@ -113,8 +113,8 @@
         "title": "Parque del Conocimiento",
         "category": "MASLOW",
         "maslowLevel": "Autorrealización",
-        "lat": -27.397,
-        "lng": -55.902,
+        "lat": -27.4321,
+        "lng": -55.9288,
         "color": "#10b981",
         "cityName": "Posadas",
         "description": "Polo educativo y científico en Misiones."

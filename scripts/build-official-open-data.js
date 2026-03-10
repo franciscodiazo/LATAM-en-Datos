@@ -45,7 +45,7 @@ const INDICATORS = [
 const CITY_ZONES = [
   { city: 'Ginebra', country: 'Colombia', iso3: 'COL', region: 'Valle del Cauca', community: 'Zona urbana y rural educativa', schoolName: 'Red escolar Ginebra', lat: 3.724, lng: -76.266 },
   { city: 'Ciudad de Guatemala', country: 'Guatemala', iso3: 'GTM', region: 'Guatemala', community: 'Área metropolitana', schoolName: 'Red escolar Guatemala', lat: 14.6349, lng: -90.5069 },
-  { city: 'Posadas', country: 'Argentina', iso3: 'ARG', region: 'Misiones', community: 'Área urbana y periurbana', schoolName: 'Red escolar Posadas', lat: -27.3671, lng: -55.8961 },
+  { city: 'Posadas', country: 'Argentina', iso3: 'ARG', region: 'Misiones', community: 'Área urbana y periurbana', schoolName: 'Red escolar Posadas', lat: -27.424592, lng: -55.934723 },
   { city: 'Lima', country: 'Perú', iso3: 'PER', region: 'Lima Metropolitana', community: 'Conos y zona central', schoolName: 'Red escolar Lima', lat: -12.0464, lng: -77.0428 },
   { city: 'Ciudad de México', country: 'México', iso3: 'MEX', region: 'CDMX', community: 'Alcaldías prioritarias', schoolName: 'Red escolar CDMX', lat: 19.4326, lng: -99.1332 },
   { city: 'Santiago', country: 'Chile', iso3: 'CHL', region: 'Región Metropolitana', community: 'Comunas urbanas', schoolName: 'Red escolar Santiago', lat: -33.4489, lng: -70.6693 }
